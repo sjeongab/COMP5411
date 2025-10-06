@@ -19,7 +19,7 @@ document.body.appendChild(renderer.domElement);
 
 var controls = new OrbitControls(camera, renderer.domElement);
 
-// post scene
+// depth scene
 const depthTexture = new THREE.DepthTexture();
 const renderTarget = new THREE.WebGLRenderTarget(
   window.innerWidth,
@@ -48,13 +48,11 @@ depthScene.add(quad);
 
 
 
-// add objects
+// add plane
 const planeGeometry = new THREE.PlaneGeometry(15, 15); // Width, Height
-// Create a basic material and set its color
-const planeMaterial = new THREE.MeshPhongMaterial({ color: 0x222222, side: THREE.DoubleSide }); // Green color
-// Create a mesh using the plane geometry and material
+const planeMaterial = new THREE.MeshPhongMaterial({ color: 0x222222, side: THREE.DoubleSide, reflectivity: 1});
 const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-scene.add(plane); // Add the plane to the scene
+scene.add(plane); 
 
 
 addObjects(scene);
