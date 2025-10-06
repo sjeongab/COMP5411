@@ -13,4 +13,7 @@
 * Display FPS
 * Load shader as glsl file
 
-  
+**Useful Links**
+https://github.com/Domenicobrz/WebGL2-Screen-space-reflections/tree/master
+https://github.com/mrdoob/three.js/pull/20156
+https://doc.babylonjs.com/features/featuresDeepDive/postProcesses/SSRRenderingPipeline
