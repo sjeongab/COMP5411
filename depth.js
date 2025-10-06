@@ -1,7 +1,3 @@
-import {vertexShaderSource} from './vertexShader.js'
-import {fragmentShaderSource} from './fragmentShader.js'
-import {addObjects} from './object/addObjects.js'
-
 import * as THREE from 'three'
 import { OrbitControls } from 'OrbitControls'
 
@@ -12,30 +8,22 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-const controls = new OrbitControls(camera, renderer.domElement);
+
 camera.position.z = 5;
+const controls = new OrbitControls(camera, renderer.domElement);
+// --- Create the Cube for Depth Rendering ---
+const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+scene.add(cube);
 
-// add objects
-const planeGeometry = new THREE.PlaneGeometry(15, 15); // Width, Height
-
-// Create a basic material and set its color
-const planeMaterial = new THREE.MeshPhongMaterial({ color: 0x222222, side: THREE.DoubleSide }); // Green color
-
-// Create a mesh using the plane geometry and material
+// --- Create a plane to add context to the scene ---
+const planeGeometry = new THREE.PlaneGeometry(10, 10);
+const planeMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
 const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-scene.add(plane); // Add the plane to the scene
-
-
-addObjects(scene);
-
-
-// Add lights
-const ambientLight = new THREE.AmbientLight(0x404040);
-scene.add(ambientLight);
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-directionalLight.position.set(5, 10, 7);
-scene.add(directionalLight);
-
+plane.position.y = -2;
+plane.rotation.x = -Math.PI / 2;
+scene.add(plane);
 
 // --- Create the Render Target for the depth pass ---
 const depthTexture = new THREE.DepthTexture();
@@ -47,7 +35,6 @@ const renderTarget = new THREE.WebGLRenderTarget(
     depthBuffer: true,
   }
 );
-
 
 // --- Create the Post-Processing Quad and Material ---
 const postScene = new THREE.Scene();
@@ -93,24 +80,24 @@ function animate() {
   requestAnimationFrame(animate);
 
   // Animate the cube for visual effect
-  //cube.rotation.x += 0.01;
-  //cube.rotation.y += 0.01;
+  cube.rotation.x += 0.01;
+  cube.rotation.y += 0.01;
 
   // --- Pass 1: Render the cube's depth to the render target ---
   // Store the original material and replace it with a depth material
-  //const originalMaterial = cube.material;
+  const originalMaterial = cube.material;
   //cube.material = new THREE.MeshDepthMaterial();
 
-  renderer.setRenderTarget(renderTarget);
-  renderer.clear(); // Clear the render target
+  //renderer.setRenderTarget(renderTarget);
+  //renderer.clear(); // Clear the render target
   renderer.render(scene, camera);
 
   // Restore the original material
   //cube.material = originalMaterial;
 
   // --- Pass 2: Render the depth texture to the screen ---
-  renderer.setRenderTarget(null);
-  renderer.render(postScene, postCamera);
+  //renderer.setRenderTarget(null);
+  //renderer.render(postScene, postCamera);
 
   controls.update();
 }
@@ -124,52 +111,3 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderTarget.setSize(window.innerWidth, window.innerHeight);
 });
-
-
-/*
-
-// --- Create the Render Target for the depth pass ---
-const depthTexture = new THREE.DepthTexture();
-const renderTarget = new THREE.WebGLRenderTarget(
-  window.innerWidth,
-  window.innerHeight,
-  {
-    depthTexture: depthTexture,
-    depthBuffer: true,
-  }
-);
-
-// Create the shader material with glslVersion
-const material = new THREE.ShaderMaterial({
-    vertexShader: vertexShaderSource,
-    fragmentShader: fragmentShaderSource,
-    glslVersion: THREE.GLSL3
-});
-
-// Set up the scene and camera
-const scene = new THREE.Scene();
-
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0,-5,2);
-camera.lookAt(0, 0, 0);
-
-var controls = new OrbitControls( camera, renderer.domElement );
-
-
-
-
-
-
-
-
-// Animation loop
-function animate() {
-    requestAnimationFrame(animate);
-    renderer.render(scene, camera); // Render the main scene (optional, can handle differently)
-    controls.update();
-}
-
-// Start the animation
-animate();
-
-*/
