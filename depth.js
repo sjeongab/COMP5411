@@ -1,31 +1,27 @@
+import {vertexShaderSource} from './vertexShader.js'
+import {fragmentShaderSource} from './fragmentShader.js'
+import {addObjects} from './object/addObjects.js'
+
 import * as THREE from 'three'
 import { OrbitControls } from 'OrbitControls'
-
+import {pass, mrt} from 'three/tsl'
+//import {pass} from 'three/tsl'
 // --- Setup ---
+const MODE = "scene"
+//const MODE = "depth"
+
 const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x333344);
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer();
+camera.position.set(0, -5, 2);
+camera.lookAt(0,0,0);
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+var controls = new OrbitControls(camera, renderer.domElement);
 
-camera.position.z = 5;
-const controls = new OrbitControls(camera, renderer.domElement);
-// --- Create the Cube for Depth Rendering ---
-const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-scene.add(cube);
-
-// --- Create a plane to add context to the scene ---
-const planeGeometry = new THREE.PlaneGeometry(10, 10);
-const planeMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-plane.position.y = -2;
-plane.rotation.x = -Math.PI / 2;
-scene.add(plane);
-
-// --- Create the Render Target for the depth pass ---
+// depth scene
 const depthTexture = new THREE.DepthTexture();
 const renderTarget = new THREE.WebGLRenderTarget(
   window.innerWidth,
@@ -35,71 +31,61 @@ const renderTarget = new THREE.WebGLRenderTarget(
     depthBuffer: true,
   }
 );
-
-// --- Create the Post-Processing Quad and Material ---
-const postScene = new THREE.Scene();
-const postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-const postMaterial = new THREE.ShaderMaterial({
+const depthScene = new THREE.Scene();
+const depthCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const depthControls = new OrbitControls(depthCamera, renderer.domElement);
+const depthMaterial = new THREE.RawShaderMaterial({
   uniforms: {
     tDepth: { value: depthTexture },
     cameraNear: { value: camera.near },
     cameraFar: { value: camera.far },
   },
-  vertexShader: `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = vec4(position, 1.0);
-    }
-  `,
-  fragmentShader: `
-    #include <packing>
-    uniform sampler2D tDepth;
-    uniform float cameraNear;
-    uniform float cameraFar;
-    varying vec2 vUv;
-
-    void main() {
-      float fragCoordZ = texture2D(tDepth, vUv).x;
-      // Convert normalized device coordinate depth to linear depth
-      float viewZ = perspectiveDepthToViewZ(fragCoordZ, cameraNear, cameraFar);
-      float linearDepth = viewZToOrthographicDepth(viewZ, cameraNear, cameraFar);
-
-      // Invert for better visualization (near is white, far is black)
-      gl_FragColor.rgb = vec3(1.0 - linearDepth);
-      gl_FragColor.a = 1.0;
-    }
-  `,
+  vertexShader: vertexShaderSource,
+  fragmentShader: fragmentShaderSource,
+  glslVersion: THREE.GLSL3
 });
 
-const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), postMaterial);
-postScene.add(quad);
+const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), depthMaterial);
+depthScene.add(quad);
+
+
+
+// add plane
+const planeGeometry = new THREE.PlaneGeometry(15, 15); // Width, Height
+const planeMaterial = new THREE.MeshPhongMaterial({ color: 0x222222, side: THREE.DoubleSide, reflectivity: 1});
+const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+scene.add(plane); 
+
+
+addObjects(scene);
+
+
+// Add lights
+const ambientLight = new THREE.AmbientLight(0x404040);
+scene.add(ambientLight);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+directionalLight.position.set(5, 10, 7);
+scene.add(directionalLight);
+
 
 // --- The Render Loop ---
 function animate() {
   requestAnimationFrame(animate);
 
-  // Animate the cube for visual effect
-  cube.rotation.x += 0.01;
-  cube.rotation.y += 0.01;
+  if (MODE == "scene"){
+    renderer.render(scene, camera);
+    controls.update();
+  }
+  else if (MODE == "depth"){
+    renderer.setRenderTarget(renderTarget);
+    renderer.clear(); // Clear the render target
+    renderer.render(scene, camera);
 
-  // --- Pass 1: Render the cube's depth to the render target ---
-  // Store the original material and replace it with a depth material
-  const originalMaterial = cube.material;
-  //cube.material = new THREE.MeshDepthMaterial();
+    renderer.setRenderTarget(null);
+    renderer.render(depthScene, depthCamera);
 
-  //renderer.setRenderTarget(renderTarget);
-  //renderer.clear(); // Clear the render target
-  renderer.render(scene, camera);
-
-  // Restore the original material
-  //cube.material = originalMaterial;
-
-  // --- Pass 2: Render the depth texture to the screen ---
-  //renderer.setRenderTarget(null);
-  //renderer.render(postScene, postCamera);
-
-  controls.update();
+    depthControls.update();
+  }
 }
 
 animate();
