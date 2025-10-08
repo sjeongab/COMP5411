@@ -6,12 +6,10 @@
 
 
 **TO DO**
-* The plane is missing if the camera is underneath the plane
-* Change purple sphere to cube
-* Enlarge yellow sphere and purple cube (I'll target these two objects and the plane to be reflective)
-* Make plane reflective
+* Re-organise objects
 * Display FPS
-* Load shader as glsl file
+* Add background using environment map
+* Implement full SSR pass
 
 **Useful Links**
 https://github.com/Domenicobrz/WebGL2-Screen-space-reflections/tree/master
