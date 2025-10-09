@@ -7,6 +7,7 @@ import { OrbitControls } from 'OrbitControls'
 import { SSRPass } from 'three/addons/postprocessing/SSRPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { ssrBuffer, ssrBufferMaterial } from './ssr/ssrBuffer.js'
 
 // --- Setup ---
 const reflections = [];
@@ -63,10 +64,24 @@ ssrPass = new SSRPass( {
 composer.addPass( ssrPass );
 composer.addPass( new OutputPass() );
 
+
+
+
+
+
+
+
+
+const redPlane = new THREE.Mesh(planeGeometry, ssrBufferMaterial);
+scene.add(redPlane);
+
+
+
 // --- The Render Loop ---
 function animate() {
   requestAnimationFrame(animate);
   if (MODE == "scene"){
+    renderer.setRenderTarget(ssrBuffer);
     renderer.render(scene, camera);
     composer.render();
     //controls.update();
