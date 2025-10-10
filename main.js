@@ -1,5 +1,3 @@
-import {vertexShaderSource} from './vertexShader.js'
-import {fragmentShaderSource} from './fragmentShader.js'
 import {addObjects} from './object/addObjects.js'
 
 import * as THREE from 'three'
@@ -8,6 +6,7 @@ import { SSRPass } from 'three/addons/postprocessing/SSRPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { ssrBuffer, ssrBufferMaterial } from './ssr/ssrBuffer.js'
+import {gBuffer, gBufferMaterial} from './gBuffer/gBuffer.js'
 
 // --- Setup ---
 const reflections = [];
@@ -34,10 +33,11 @@ cameraControls.update();
 // add plane
 const planeGeometry = new THREE.PlaneGeometry(150, 150); // Width, Height
 const planeMaterial = new THREE.MeshPhongMaterial({ color: 0x222222, side: THREE.DoubleSide, reflectivity: 1});
-const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+//const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+const plane = new THREE.Mesh(planeGeometry, gBufferMaterial);
 plane.rotateX(-Math.PI/2);
 scene.add(plane); 
-reflections.push(plane);
+//reflections.push(plane);
 
 
 addObjects(scene);
@@ -66,12 +66,7 @@ composer.addPass( new OutputPass() );
 
 
 
-
-
-
-
-
-
+//ssrBuffer Trial
 const redPlane = new THREE.Mesh(planeGeometry, ssrBufferMaterial);
 scene.add(redPlane);
 
@@ -81,10 +76,9 @@ scene.add(redPlane);
 function animate() {
   requestAnimationFrame(animate);
   if (MODE == "scene"){
-    renderer.setRenderTarget(ssrBuffer);
+    renderer.setRenderTarget(gBuffer);
     renderer.render(scene, camera);
     composer.render();
-    //controls.update();
   }
 }
 

@@ -9,18 +9,9 @@ const ssrBuffer = new THREE.WebGLRenderTarget(
         minFilter: THREE.NearestFilter,
         magFilter: THREE.NearestFilter,
         format: THREE.RGBAFormat,
-        type: THREE.FloatType, // Use float texture for high-precision data
+        type: THREE.FloatType,
     }
 );
-
-
-/*
-const depthTexture = new THREE.DepthTexture(
-    window.innerWidth,
-    window.innerHeight
-);
-depthTexture.type = THREE.UnsignedIntType;
-gBuffer.depthTexture = depthTexture; */
 
 
 const ssrBufferMaterial = new THREE.RawShaderMaterial({

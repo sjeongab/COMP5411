@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import {gBufferMaterial} from '../gBuffer/gBuffer.js'
 
 function addSphere(scene, config) {
     var sphereGeometry = new THREE.SphereGeometry(config.scale, 32, 16);
