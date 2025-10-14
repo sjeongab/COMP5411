@@ -17,11 +17,11 @@ const gBufferMaterial = new THREE.RawShaderMaterial({
     vertexShader: gBufferVertexShader,
     fragmentShader: gBufferFragmentShader,
     glslVersion: THREE.GLSL3,
-    uniforms: {
+    /*uniforms: {
             normalMatrix: { value: new THREE.Matrix3() },
             modelViewMatrix: { value: new THREE.Matrix4() },
             projectionMatrix: { value: new THREE.Matrix4() },
-        },
+    },*/
 });
 
 export {gBuffer, gBufferMaterial};

@@ -42,7 +42,7 @@ const ssrFragmentShader = `
         float maxSteps = 50.0;
         for (float i = 0.0; i < maxSteps; i++) {
             vec3 p = position + reflectedRay * (i * stepSize);
-            vec4 projectedPos = projectionMatrix * inverseViewMatrix * vec4(p, 1.0);
+            vec4 projectedPos = inverseViewMatrix * vec4(p, 1.0);//inverseProjectionMatrix * inverseViewMatrix * vec4(p, 1.0);
             projectedPos.xyz /= projectedPos.w;
             vec2 projectedUV = projectedPos.xy * 0.5 + 0.5;
 
