@@ -1,5 +1,5 @@
 const ssrFragmentShader = `
-        precision highp float;
+    precision highp float;
 
     uniform sampler2D gBufferTexture;
     uniform sampler2D depthBuffer;
@@ -42,7 +42,7 @@ const ssrFragmentShader = `
         float maxSteps = 50.0;
         for (float i = 0.0; i < maxSteps; i++) {
             vec3 p = position + reflectedRay * (i * stepSize);
-            vec4 projectedPos = inverseViewMatrix * vec4(p, 1.0);//inverseProjectionMatrix * inverseViewMatrix * vec4(p, 1.0);
+            vec4 projectedPos = inverseProjectionMatrix * inverseViewMatrix * vec4(p, 1.0);
             projectedPos.xyz /= projectedPos.w;
             vec2 projectedUV = projectedPos.xy * 0.5 + 0.5;
 
