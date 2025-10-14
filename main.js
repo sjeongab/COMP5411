@@ -16,6 +16,7 @@ let composer, ssrPass, cameraControls;
 const MODE = "scene"
 
 const scene = new THREE.Scene();
+const ssrScene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
 camera.position.set(0, 75, 160);
 //camera.lookAt(0,0,0);
@@ -50,6 +51,9 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
 directionalLight.position.set(5, 10, 7);
 scene.add(directionalLight);
 
+const postProcessQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ssrBufferMaterial);
+ssrScene.add(postProcessQuad);
+
 composer = new EffectComposer( renderer );
 ssrPass = new SSRPass( {
   renderer,
@@ -74,12 +78,26 @@ scene.add(redPlane);
 
 // --- The Render Loop ---
 function animate() {
-  requestAnimationFrame(animate);
+  /*requestAnimationFrame(animate);
   if (MODE == "scene"){
     renderer.setRenderTarget(gBuffer);
     renderer.render(scene, camera);
     composer.render();
-  }
+  }*/
+  requestAnimationFrame(animate);
+  cameraControls.update();
+
+  // 1. G-buffer Pass: Render normals and depth
+  renderer.setRenderTarget(gBuffer);
+  renderer.render(scene, camera);
+
+  // 2. SSR Pass: Render to screen using the buffers
+  renderer.setRenderTarget(null);
+  ssrBufferMaterial.uniforms.inverseProjectionMatrix.value.copy(camera.projectionMatrix).invert();
+  ssrBufferMaterial.uniforms.inverseViewMatrix.value.copy(camera.matrixWorld);
+  renderer.render(ssrScene, camera);
+
+  composer.render();
 }
 
 animate();
