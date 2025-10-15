@@ -189,7 +189,7 @@ const ssrMaterial = new THREE.ShaderMaterial({
 
                     // If the ray intersects the sphere
                     if (distance < 0.0) {
-                        FragColor = vec4(albedo, 1.0); // Replace with actual texture lookup as needed
+                        color = vec4(1.0, 0.0, 0.0, 1.0); // Replace with actual texture lookup as needed
                         break; // Exit the loop on intersection
                     }
 
@@ -203,7 +203,7 @@ const ssrMaterial = new THREE.ShaderMaterial({
                 }
 
 
-                vec3 finalColor = albedo * 0.5 + reflection * 0.5; // Blend the reflection with the scene color
+                FragColor = color.a > 0.0 ? color : vec4(albedo, 1.0); //= albedo * 0.5 + reflection * 0.5; // Blend the reflection with the scene color
 
                 // Step 8: Output the final color
                 //FragColor = vec4(finalColor, 1.0);
