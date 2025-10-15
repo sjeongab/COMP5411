@@ -74,6 +74,7 @@ const gbufferMaterial = new THREE.ShaderMaterial({
         precision highp float;
 
         uniform vec3 uColor;
+        uniform float uReflectivity;
 
         in vec3 vNormal;
         in vec3 vWorldPosition;
@@ -87,7 +88,7 @@ const gbufferMaterial = new THREE.ShaderMaterial({
             gColor = vec4(uColor, 1.0);
             gNormal = vec4(normalize(vNormal), 1.0);
             gPosition = vec4(vWorldPosition, 1.0);
-            gReflection = 1.0;
+            gReflection = uReflectivity;
         }
     `,
     glslVersion: THREE.GLSL3,
@@ -120,7 +121,7 @@ precision highp float;
 uniform sampler2D gColor;
 uniform sampler2D gNormal;
 uniform sampler2D gPosition;
-uniform float gReflection;
+uniform sampler2D gReflection;
 uniform vec2 resolution;
 uniform mat4 projectionMatrix;
 uniform mat4 inverseProjectionMatrix;
@@ -136,11 +137,12 @@ void main() {
     vec3 position = texture(gPosition, uv).xyz;
     vec3 normal = texture(gNormal, uv).xyz;
     vec3 albedo = texture(gColor, uv).rgb;
+    vec3 reflects = texture(gReflection, uv).rgb;
 
     
     
     // Only apply reflection to the plane by checking its normal
-    if (abs(normal.y - 1.0) < 1.0) {  // incorrect decision?
+    if(abs(reflects.r - 1.0) < 1.0) {  // incorrect decision?
         vec3 reflectedColor = vec3(0.0);
         float reflectionStrength = 0.0;
         
@@ -191,11 +193,7 @@ void main() {
     } else {
         FragColor = vec4(albedo, 1.0);
     }
-    if(abs(gReflection - 1.0) < 1.0){
-        FragColor = vec4(1.0,0.0,0.0, 1.0);
-        
-    }
-        //FragColor = vec4(texture(gNormal, uv).xyz , 1.0);
+        //FragColor = vec4(gReflection, 1.0, 0.0, 1.0);
 }
 
     `,
@@ -205,6 +203,7 @@ void main() {
 const sphereGbufferMaterial = new THREE.ShaderMaterial({
     uniforms: {
         uColor: { value: new THREE.Color(0x8080ff) },
+        uReflectivity: {value: 0.0},
     },
     // Same vertex and fragment shader as before
     vertexShader: gbufferMaterial.vertexShader,
@@ -215,6 +214,7 @@ const sphereGbufferMaterial = new THREE.ShaderMaterial({
 const planeGbufferMaterial = new THREE.ShaderMaterial({
     uniforms: {
         uColor: { value: new THREE.Color(0xcccccc) },
+        uReflectivity: {value: 1.0},
     },
     // Same vertex and fragment shader as before
     vertexShader: gbufferMaterial.vertexShader,
@@ -252,8 +252,8 @@ function animate() {
 
     // Pass 2: Render post-processing quad with SSR effect
     renderer.setRenderTarget(null);
-    renderer.clear();
-    renderer.render(postScene, postCamera);
+    //renderer.clear();
+    renderer.render(postScene, camera);
 }
 
 animate();
