@@ -34,7 +34,7 @@ camera.lookAt(0, 0, 0);
 // 2. Create the G-buffer using WebGLRenderTarget with the 'count' option
 const size = renderer.getSize(new THREE.Vector2());
 const mrt = new THREE.WebGLRenderTarget(size.width, size.height, {
-    count: 3, // Enable multiple render targets
+    count: 4, // Enable multiple render targets
     format: THREE.RGBAFormat,
     type: THREE.FloatType, // Use FloatType for higher precision
     minFilter: THREE.NearestFilter,
@@ -46,6 +46,13 @@ const mrt = new THREE.WebGLRenderTarget(size.width, size.height, {
 mrt.textures[0].name = 'gColor';
 mrt.textures[1].name = 'gNormal';
 mrt.textures[2].name = 'gPosition';
+mrt.textures[3].name = 'gReflection';
+
+const [gColorTexture, gNormalTexture, gPositionTexture, gReflectionTexture] = mrt.textures;
+gColorTexture.name = 'gColor';
+gNormalTexture.name = 'gNormal';
+gPositionTexture.name = 'gPosition';
+gReflectionTexture.name = 'gReflection';
 
 // 3. Create the G-buffer and SSR materials (shaders are the same)
 const gbufferMaterial = new THREE.ShaderMaterial({
@@ -74,11 +81,13 @@ const gbufferMaterial = new THREE.ShaderMaterial({
         layout(location = 0) out vec4 gColor;
         layout(location = 1) out vec4 gNormal;
         layout(location = 2) out vec4 gPosition;
+        layout(location = 3) out float gReflection;
 
         void main() {
             gColor = vec4(uColor, 1.0);
             gNormal = vec4(normalize(vNormal), 1.0);
             gPosition = vec4(vWorldPosition, 1.0);
+            gReflection = 1.0;
         }
     `,
     glslVersion: THREE.GLSL3,
@@ -89,12 +98,15 @@ const inverseProjectionMatrix = new THREE.Matrix4();
 
 const ssrMaterial = new THREE.ShaderMaterial({
     uniforms: {
-        gColor: { value: mrt.textures[0] }, // Assign specific textures
-        gNormal: { value: mrt.textures[1] },
-        gPosition: { value: mrt.textures[2] },
+        gColor: { value: gColorTexture }, 
+        gNormal: { value: gNormalTexture },
+        gPosition: { value: gPositionTexture },
+        gReflection: {value: gReflectionTexture},
         resolution: { value: new THREE.Vector2(size.width, size.height) },
         projectionMatrix: { value: camera.projectionMatrix },
         inverseProjectionMatrix: { value: inverseProjectionMatrix },
+        inverseViewMatrix: { value: new THREE.Matrix4() },
+        cameraWorldPosition: { value: new THREE.Vector3() },
         viewPosition: { value: camera.position },
     },
     vertexShader: /* glsl */ `
@@ -108,6 +120,7 @@ precision highp float;
 uniform sampler2D gColor;
 uniform sampler2D gNormal;
 uniform sampler2D gPosition;
+uniform float gReflection;
 uniform vec2 resolution;
 uniform mat4 projectionMatrix;
 uniform mat4 inverseProjectionMatrix;
@@ -123,9 +136,11 @@ void main() {
     vec3 position = texture(gPosition, uv).xyz;
     vec3 normal = texture(gNormal, uv).xyz;
     vec3 albedo = texture(gColor, uv).rgb;
+
+    
     
     // Only apply reflection to the plane by checking its normal
-    if (abs(normal.y - 1.0) < 0.2) { 
+    if (abs(normal.y - 1.0) < 1.0) {  // incorrect decision?
         vec3 reflectedColor = vec3(0.0);
         float reflectionStrength = 0.0;
         
@@ -148,18 +163,22 @@ void main() {
             vec4 rayPointView = inverseViewMatrix * vec4(rayPointWorld, 1.0);
             vec4 projCoord = projectionMatrix * rayPointView;
             vec2 screenCoord = (projCoord.xy / projCoord.w) * 0.5 + 0.5;
+            //vec2 screenCoord = (projCoord.xy / projCoord.w);
             
-            if (screenCoord.x < 0.0 || screenCoord.x > 1.0 ||
+            /*if (screenCoord.x < 0.0 || screenCoord.x > 1.0 ||
                 screenCoord.y < 0.0 || screenCoord.y > 1.0) {
                 break;
-            }
+            }*/
             
             // Get position from G-buffer at projected screen coord (already in world space)
             vec3 gPositionSample = texture(gPosition, screenCoord).xyz;
             
             // Intersection test in world space
-            float dist = distance(rayPointWorld, gPositionSample);
-            if (dist < 1.4) { // Intersection detected
+            float dist = distance(rayOrigin, gPositionSample);
+            //float dist = 0.6;
+            if (dist < 0.8) { 
+                // Intersection detected
+                //reflectedColor =  vec3(1.0,1.0,0.0);
                 reflectedColor = texture(gColor, screenCoord).rgb;
                 reflectionStrength = 1.0;
                 break;
@@ -167,10 +186,16 @@ void main() {
         }
         
         FragColor = vec4(mix(albedo, reflectedColor, reflectionStrength), 1.0);
+        //FragColor = vec4(1.0, 0.0, 0.0, 1.0);
         
     } else {
         FragColor = vec4(albedo, 1.0);
     }
+    if(abs(gReflection - 1.0) < 1.0){
+        FragColor = vec4(1.0,0.0,0.0, 1.0);
+        
+    }
+        //FragColor = vec4(texture(gNormal, uv).xyz , 1.0);
 }
 
     `,
@@ -204,6 +229,9 @@ const postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 const postQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ssrMaterial);
 postScene.add(postQuad);
 
+sphere.material = sphereGbufferMaterial;
+sphere.material.uniforms.uColor.value = new THREE.Color(0x8080ff);
+
 // 5. Render loop
 function animate() {
     requestAnimationFrame(animate);
@@ -216,8 +244,7 @@ function animate() {
     renderer.clear();
     
     // Use the G-buffer material to write to the targets
-    sphere.material = sphereGbufferMaterial;
-    sphere.material.uniforms.uColor.value = new THREE.Color(0x8080ff);
+   
     plane.material = planeGbufferMaterial;
     plane.material.uniforms.uColor.value = new THREE.Color(0xcccccc);
     
