@@ -150,6 +150,21 @@ const ssrMaterial = new THREE.ShaderMaterial({
 
             out vec4 FragColor;
 
+            // Helper function to reconstruct world space position from depth
+            vec3 getWorldPosition(vec2 uv, float depth) {
+                // Get clip space position from UVs
+                vec4 clipPosition;
+                clipPosition.xy = uv * 2.0 - 1.0;
+                clipPosition.z = depth * 2.0 - 1.0;
+                clipPosition.w = 1.0;
+
+                // Unproject to world space
+                vec4 worldPosition = inverseProjectionMatrix * clipPosition;
+                worldPosition /= worldPosition.w;
+
+                return worldPosition.xyz;
+            }
+
             void main() {
                 vec2 uv = gl_FragCoord.xy / resolution;
                 
@@ -157,57 +172,58 @@ const ssrMaterial = new THREE.ShaderMaterial({
                 vec3 position = texture(gPosition, uv).xyz;
                 vec3 normal = texture(gNormal, uv).xyz;
                 vec3 albedo = texture(gColor, uv).rgb;
-                float depth = texture(gDepth, uv).r;
                 float reflective = texture(gReflection, uv).r;
-
-                vec4 clipSpace = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
-                vec4 cameraSpace = inverse(projectionMatrix) * clipSpace; // Inverse projection to camera space
-                cameraSpace /= cameraSpace.w;
 
                 // Don't calculate SSR for non-reflective pixels
                 if (reflective < 0.5) {
                     FragColor = vec4(albedo, 1.0);
                     return;
                 }
-                vec3 toPixel = normalize(cameraSpace.xyz  - cameraWorldPosition);
-                vec3 reflection = reflect(toPixel, normal);
-
-                vec3 rayOrigin = cameraSpace.xyz;
-                vec3 rayDir = reflection;
-                vec3 currentPos = rayOrigin; // Start at the pixel position
-                vec4 color = vec4(0.0);
+                
+                vec3 reflectedColor = vec3(0.0);
+                float reflectionStrength = 0.0;
+                
+                vec3 viewDir = normalize(position - cameraWorldPosition);
+                vec3 reflectionVector = reflect(viewDir, normal);
+                
+                vec3 rayOrigin = position;
+                vec3 rayDir = reflectionVector;
                 
                 float stepSize = 0.1;
                 int maxSteps = 10;
-
+                
                 for (int i = 0; i < maxSteps; i++) {
-                    // Step 10: Check for intersection
-                    // Assuming a simple sphere intersection for demonstration
-                    float radius = 1.0; // Example radius
-                    vec3 sphereCenter = vec3(0.0, 0.0, -5.0); // Example sphere position
-                    float distance = length(currentPos - sphereCenter) - radius;
+                    // Project ray point to screen space
+                    vec3 rayPointWorld = rayOrigin + rayDir * stepSize * float(i);
+                    vec4 projCoord = projectionMatrix * inverseViewMatrix * vec4(rayPointWorld, 1.0);
+                    vec2 screenCoord = (projCoord.xy / projCoord.w) * 0.5 + 0.5;
 
-                    // If the ray intersects the sphere
-                    if (distance < 0.0) {
-                        FragColor = vec4(albedo, 1.0); // Replace with actual texture lookup as needed
-                        break; // Exit the loop on intersection
+                    // Check if screen coordinates are outside the viewport
+                    if (screenCoord.x < 0.0 || screenCoord.x > 1.0 ||
+                        screenCoord.y < 0.0 || screenCoord.y > 1.0) {
+                        break;
                     }
+                    
+                    // Sample depth buffer at the projected screen coordinate
+                    float sampledDepthRaw = texture(gDepth, screenCoord).x;
 
-                    // Step 11: Move along the ray direction
-                    currentPos += rayDir * stepSize;
+                    // Reconstruct world position from sampled depth
+                    vec3 sampledWorldPosition = getWorldPosition(screenCoord, sampledDepthRaw);
 
-                    // Optional: Break if out of bounds (for example)
-                    if (length(currentPos) > 100.0) {
-                        break; // Safety check to prevent infinite loops
+                    // Check for intersection with the sampled geometry
+                    // Compare the ray's step position with the sampled world position
+                    if (distance(rayPointWorld, sampledWorldPosition) < 8.0) { // A small tolerance is needed
+                        // Intersection detected! Sample the G-buffer at the intersection point
+                        //reflectedColor = texture(gColor, screenCoord).rgb;
+                        reflectedColor = reflectionVector;
+                        reflectionStrength = 1.0;
+                        break;
                     }
+                        reflectedColor = reflectionVector;
+                        reflectionStrength = 1.0;
                 }
-
-
-                vec3 finalColor = albedo * 0.5 + reflection * 0.5; // Blend the reflection with the scene color
-
-                // Step 8: Output the final color
-                //FragColor = vec4(finalColor, 1.0);
-                //FragColor = vec4(uv, 0.0, 1.0);
+                
+                FragColor = vec4(mix(albedo, reflectedColor, reflectionStrength), 1.0);
             }
         `,
     glslVersion: THREE.GLSL3,
