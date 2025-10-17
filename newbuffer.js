@@ -199,13 +199,15 @@ const ssrMaterial = new THREE.ShaderMaterial({
             float normalizedCurrentDepth = (currentDepth - cameraNear) / (cameraFar - cameraNear);
             normalizedCurrentDepth = clamp(normalizedCurrentDepth, 0.0, 1.0);
 
-            // Step 10: Check for intersection with depth buffer
-            if (normalizedCurrentDepth <= linearDepthSample) {
-                // Step 11: If an intersection is found, sample the color from the scene
-                // Here, you would typically sample a color texture at the ray origin position
-                // For this example, let's assume we return a solid color
-                color = vec4(1.0, 1.0, 1.0, 1.0); // Replace with actual texture sampling
-                FragColor = vec4(albedo, 1.0);
+            vec2 screenUV = rayOrigin.xy / rayOrigin.z; // Convert to screen UV coordinates
+            screenUV = 0.5 * screenUV + 0.5; // Map from [-1, 1] to [0, 1]
+            float sceneDepth = texture(gDepth, screenUV).r; // Sample depth buffer
+
+            // Step 11: Check if the current ray's depth is less than the scene depth
+            if (normalizedCurrentDepth <= sceneDepth) {
+                // Step 12: Color the pixel yellow if the ray hits an object
+                color = vec4(1.0, 1.0, 0.0, 1.0); // Yellow color
+                FragColor = vec4(1.0, 0.0, 0.0, 1.0);
                 return;
                 break; // Exit the loop on intersection
             }
