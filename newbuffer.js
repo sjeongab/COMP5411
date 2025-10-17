@@ -175,86 +175,51 @@ const ssrMaterial = new THREE.ShaderMaterial({
             float depth = texture(gDepth, uv).r;
             float linearDepthSample = linearDepth(depth);
 
-            vec2 uvs = gl_FragCoord.xy / resolution;
-            float rawDepth = texture(gDepth, vec2(-1.0, -1.0)).r;
-
-            //FragColor = vec4(linearDepthSample, 0.0, 0.0, 1.0);
-            //return;
-
             if (reflectivity < 0.5 ) {
                 FragColor = vec4(albedo, 1.0);
                 return;
             }
 
-            vec4 clipSpace = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
-            vec4 cameraSpace = inverse(projectionMatrix) * clipSpace; // Inverse projection to camera space
-            cameraSpace /= cameraSpace.w;
+            vec3 viewDirection = normalize(cameraPosition - (cameraNear + linearDepthSample * (cameraFar - cameraNear)));
+            vec3 reflection = reflect(viewDirection, normal);
+            FragColor = vec4(reflection, 1.0);
 
-            vec3 toPixel = normalize(cameraSpace.xyz  - cameraWorldPosition);
-                vec3 reflection = reflect(toPixel, normal);
-
-                vec3 rayOrigin = cameraSpace.xyz;
-                vec3 rayDir = reflection;
-                vec3 currentPos = rayOrigin; // Start at the pixel position
-                vec4 color = vec4(0.0);
-                
-                float stepSize = 0.1;
-                int maxSteps = 10;
-
-                for (int i = 0; i < maxSteps; i++) {
-                    // Step 10: Check for intersection
-                    float distance = length(currentPos - position);
-                    if (abs(distance) < 1.0) {
-                        //color = vec4(texture(gColor, uv).rgb, 1.0); // Replace with actual texture lookup as needed
-                        color = vec4(1.0, 0.0, 0.0, 1.0);
-                        //color = vec4(float(i)/10.0, 0.0, 0.0, 1.0);
-                        break; // Exit the loop on intersection
-                    }
-
-                    // Step 11: Move along the ray direction
-                    currentPos += rayDir * stepSize;
-                   
-                }
-
-
-                FragColor = color.a > 0.0 ? color : vec4(albedo, 1.0); //= albedo * 0.5 + reflection * 0.5; // Blend the reflection with the scene color
-
-                // Step 8: Output the final color
-                //FragColor = vec4(finalColor, 1.0);
-                //FragColor = vec4(uv, 0.0, 1.0);
-
-
-            /*vec3 viewDir = normalize(cameraWorldPosition - position);
-            vec3 reflectionDir = reflect(-viewDir, normal);
-            //vec3 rayOrigin = position;
-            vec3 rayOrigin = cameraWorldPosition;
-            vec3 rayDir = reflectionDir;
-            vec3 currentPos = rayOrigin;
-            vec4 reflectionColor = vec4(0.0);
+            vec3 rayOrigin = cameraPosition + viewDirection * (cameraNear + linearDepthSample * (cameraFar - cameraNear));
+            vec3 rayDir = normalize(reflection);
+            vec4 color = vec4(0.0);
 
             float stepSize = 0.1;
-            int maxSteps = 50;
-
+            int maxSteps = 10;
             for (int i = 0; i < maxSteps; i++) {
-                currentPos += rayDir * stepSize;
-                vec4 currentClip = projectionMatrix * inverseViewMatrix * vec4(currentPos, 1.0);
-                currentClip /= currentClip.w;
-                vec2 currentUV = (currentClip.xy + 1.0) / 2.0;
-                float sampledDepth = texture(gDepth, currentUV).r;
-                float linearSampledDepth = linearDepth(sampledDepth);
+            // Step 8: Move along the ray
+            rayOrigin += rayDir * stepSize;
 
-                //if (currentUV.x < 0.0 || currentUV.x > 1.0 || currentUV.y < 0.0 || currentUV.y > 1.0) break;
+            // Step 9: Convert ray origin to normalized device coordinates for depth comparison
+            float currentDepth = (cameraNear * cameraFar) / (cameraFar + cameraNear - rayOrigin.z * cameraFar);
+            float normalizedCurrentDepth = (currentDepth - cameraNear) / (cameraFar - cameraNear);
+            normalizedCurrentDepth = clamp(normalizedCurrentDepth, 0.0, 1.0);
 
-                float depthDiff = linearSampledDepth - linearDepthSample;
-                if (abs(depthDiff) < 1.0) { // Intersection threshold
-                    reflectionColor = vec4(texture(gColor, currentUV).rgb, 1.0);
-                    //reflectionColor = vec4(1.0, 1.0, 0.0, 1.0);
-                    FragColor = reflectionColor;
-                    return;
-                }
+            // Step 10: Check for intersection with depth buffer
+            if (normalizedCurrentDepth <= linearDepthSample) {
+                // Step 11: If an intersection is found, sample the color from the scene
+                // Here, you would typically sample a color texture at the ray origin position
+                // For this example, let's assume we return a solid color
+                color = vec4(1.0, 1.0, 1.0, 1.0); // Replace with actual texture sampling
+                FragColor = vec4(albedo, 1.0);
+                return;
+                break; // Exit the loop on intersection
             }
-            FragColor = vec4(texture(gPosition, uv).x, 0.0, texture(gPosition, uv).z, 1.0); //texture(gPosition, uv).y equals to 0.0;
-            //FragColor = mix(vec4(albedo, 1.0), reflectionColor, reflectivity);*/
+
+            // Optional: Exit if out of bounds
+            if (length(rayOrigin) > 100.0) {
+                FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+                return;
+               // break; // Prevent infinite loops
+            }
+            FragColor = color.a > 0.0 ? color : vec4(0.0, 0.0, 0.0, 1.0); // Default to black if no reflection
+    }
+
+
         }
     `,
     glslVersion: THREE.GLSL3,
