@@ -182,14 +182,11 @@ const ssrMaterial = new THREE.ShaderMaterial({
 
                 for (int i = 0; i < maxSteps; i++) {
                     // Step 10: Check for intersection
-                    // Assuming a simple sphere intersection for demonstration
-                    float radius = 1.0; // Example radius
-                    vec3 sphereCenter = vec3(0.0, 0.0, -5.0); // Example sphere position
-                    float distance = length(currentPos - sphereCenter) - radius;
+                    float distance = length(currentPos - depth);
 
-                    // If the ray intersects the sphere
-                    if (distance < 0.0) {
-                        color = vec4(1.0, 0.0, 0.0, 1.0); // Replace with actual texture lookup as needed
+                    if (abs(distance) < 5.0) {
+                        //color = vec4(texture(gColor, position.xy).rgb, 1.0); // Replace with actual texture lookup as needed
+                        color = vec4(1.0, 0.0, 0.0, 1.0);
                         break; // Exit the loop on intersection
                     }
 
@@ -257,6 +254,8 @@ function animate() {
     renderer.clear();
     
     // Use the G-buffer material to write to the targets
+    sphere.material = sphereGbufferMaterial;
+    sphere.material.uniforms.uColor.value = new THREE.Color(0x8080ff);
    
     plane.material = planeGbufferMaterial;
     plane.material.uniforms.uColor.value = new THREE.Color(0xcccccc);
