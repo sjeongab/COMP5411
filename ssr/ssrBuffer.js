@@ -37,4 +37,4 @@ const ssrBufferMaterial = new THREE.RawShaderMaterial({
         }
 });
 
-export {ssrBuffer, ssrBufferMaterial};
+//export {ssrBuffer, ssrBufferMaterial};

@@ -41,11 +41,12 @@ const ssrFragmentShader = `
 			return texture2D( gDepth, uv ).r;
 		}
 		float getViewZ( const in float depth ) {
-			#ifdef PERSPECTIVE_CAMERA
+			/*#ifdef PERSPECTIVE_CAMERA
 				return perspectiveDepthToViewZ( depth, cameraNear, cameraFar );
 			#else
 				return orthographicDepthToViewZ( depth, cameraNear, cameraFar );
-			#endif
+			#endif*/
+            return orthographicDepthToViewZ( depth, cameraNear, cameraFar );
 		}
 
         float linearDepth(float depthSample) {
@@ -103,7 +104,10 @@ const ssrFragmentShader = `
 
 			vec3 viewNormal=getViewNormal( uv );
 
-            vec3 viewIncidentDir=normalize(viewPosition);
+            //vec3 viewIncidentDir=normalize(viewPosition);
+            //vec3 viewReflectDir=reflect(viewIncidentDir,viewNormal);
+
+            vec3 viewIncidentDir=vec3(0,0,-1);
             vec3 viewReflectDir=reflect(viewIncidentDir,viewNormal);
 
             float maxDistance = 1500.0;
@@ -111,11 +115,11 @@ const ssrFragmentShader = `
 
 
             vec3 d1viewPosition=viewPosition+viewReflectDir*maxReflectRayLen;
-            if(d1viewPosition.z>-cameraNear){
+            /*if(d1viewPosition.z>-cameraNear){
 					//https://tutorial.math.lamar.edu/Classes/CalcIII/EqnsOfLines.aspx
 					float t=(-cameraNear-viewPosition.z)/viewReflectDir.z;
 					d1viewPosition=viewPosition+viewReflectDir*t;
-            }
+            }*/
             d1=viewPositionToXY(d1viewPosition);
 
 			float totalLen=length(d1-d0);
@@ -142,7 +146,8 @@ const ssrFragmentShader = `
 
                 //float recipVPZ=1./viewPosition.z;
                 //float viewReflectRayZ=1./(recipVPZ+s*(1./d1viewPosition.z-recipVPZ));
-                float viewReflectRayZ = (viewPosition.z * d1viewPosition.z) / ((d1viewPosition.z + s*(viewPosition.z - d1viewPosition.z))+0.01);
+                //float viewReflectRayZ = (viewPosition.z * d1viewPosition.z) / ((d1viewPosition.z + s*(viewPosition.z - d1viewPosition.z))+0.01);
+                float viewReflectRayZ=viewPosition.z+s*(d1viewPosition.z-viewPosition.z);
                 if(viewReflectRayZ<=vZ){
                     bool hit;
 
@@ -164,9 +169,10 @@ const ssrFragmentShader = `
                     vec3 vN=getViewNormal( uv );
                     if(dot(viewReflectDir,vN)>=0.) continue;
                     float distance=pointPlaneDistance(vP,viewPosition,viewNormal);
-                    //if(distance>maxDistance) break;
+                    if(distance>maxDistance) break;
                     vec3 reflectColor = texture2D(gColor,uv).rgb;
                     FragColor = vec4(reflectColor, 1.0);
+                    //FragColor = vec4(1.0, 0.0, 1.0, 1.0);
                     return;
                     }  
                 }

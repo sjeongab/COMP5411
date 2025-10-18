@@ -17,6 +17,7 @@ scene.background = new THREE.Color(0x4422bb);
 const ssrScene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
 camera.position.set(0, 75, 160);
+const ssrCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
@@ -44,13 +45,13 @@ const ssrBufferMaterial = new THREE.ShaderMaterial({
             gDepth: { value: gBuffer.depthTexture },
             resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
     
-            projectionMatrix: { value: camera.projectionMatrix },
+            projectionMatrix: { value: ssrCamera.projectionMatrix },
             inverseProjectionMatrix: { value: new THREE.Matrix4() },
             inverseViewMatrix: { value: new THREE.Matrix4() },
-            cameraWorldPosition: { value: camera.position },
+            cameraWorldPosition: { value: ssrCamera.position },
     
-            cameraNear: { value: camera.near },
-            cameraFar: { value: camera.far },
+            cameraNear: { value: ssrCamera.near },
+            cameraFar: { value: ssrCamera.far },
         }
 });
 
@@ -80,9 +81,9 @@ function animate() {
   }
   else if (MODE == "SSR"){
 
-  ssrBufferMaterial.uniforms.inverseProjectionMatrix.value.copy(camera.projectionMatrix).invert();
-  ssrBufferMaterial.uniforms.inverseViewMatrix.value.copy(camera.matrixWorldInverse).invert();
-  ssrBufferMaterial.uniforms.cameraWorldPosition.value.copy(camera.position);
+  ssrBufferMaterial.uniforms.inverseProjectionMatrix.value.copy(ssrCamera.projectionMatrix).invert();
+  ssrBufferMaterial.uniforms.inverseViewMatrix.value.copy(ssrCamera.matrixWorldInverse).invert();
+  ssrBufferMaterial.uniforms.cameraWorldPosition.value.copy(ssrCamera.position);
 
   // 1. G-buffer Pass: Render normals and depth
   renderer.setRenderTarget(gBuffer);
@@ -91,7 +92,7 @@ function animate() {
 
   // 2. SSR Pass: Render to screen using the buffers
   renderer.setRenderTarget(null);
-  renderer.render(ssrScene, camera);
+  renderer.render(ssrScene, ssrCamera);
   }
 }
 
