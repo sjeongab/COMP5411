@@ -56,7 +56,7 @@ depthTexture.format = THREE.DepthFormat;
 depthTexture.type = THREE.UnsignedIntType;
 
 const mrt = new THREE.WebGLRenderTarget(size.width, size.height, {
-    count: 5, // Enable multiple render targets
+    count: 4, // Enable multiple render targets
     format: THREE.RGBAFormat,
     type: THREE.FloatType,
     minFilter: THREE.NearestFilter,
@@ -70,8 +70,8 @@ mrt.textures[0].name = 'gColor';
 mrt.textures[1].name = 'gNormal';
 mrt.textures[2].name = 'gPosition';
 mrt.textures[3].name = 'gReflection';
-mrt.textures[4].name = 'gDepth';
-const [gColorTexture, gNormalTexture, gPositionTexture, gReflectionTexture, gDepth] = mrt.textures;
+//mrt.textures[4].name = 'gDepth';
+const [gColorTexture, gNormalTexture, gPositionTexture, gReflectionTexture] = mrt.textures;
 
 // 3. Create the G-buffer material
 const gbufferMaterial = new THREE.ShaderMaterial({
@@ -105,14 +105,14 @@ const gbufferMaterial = new THREE.ShaderMaterial({
         layout(location = 1) out vec4 gNormal;
         layout(location = 2) out vec4 gPosition;
         layout(location = 3) out float gReflection;
-        layout(location = 4) out float gDepth;
+        //layout(location = 4) out float gDepth;
 
         void main() {
             gColor = vec4(uColor, 1.0);
             gNormal = vec4(normalize(vNormal), 1.0);
             gPosition = vec4(vWorldPosition, 1.0);
             gReflection = uReflectivity;
-            gDepth = uReflectivity;
+            //gDepth = uReflectivity;
         }
     `,
     glslVersion: THREE.GLSL3,
@@ -249,7 +249,7 @@ const ssrMaterial = new THREE.ShaderMaterial({
             vec3 viewIncidentDir=normalize(viewPosition);
             vec3 viewReflectDir=reflect(viewIncidentDir,viewNormal);
 
-            float maxDistance = 180.0;
+            float maxDistance = 1500.0;
             float maxReflectRayLen=maxDistance/dot(-viewIncidentDir,viewNormal);
 
 
@@ -268,12 +268,12 @@ const ssrMaterial = new THREE.ShaderMaterial({
 			float xSpan=xLen/totalStep;
 			float ySpan=yLen/totalStep;
 
-            int MAX_STEP = 800;
+            int MAX_STEP = 1000;
 
             for(float i=0.;i<float(MAX_STEP);i++){
 				if(i>=totalStep) break;
 				vec2 xy=vec2(d0.x+i*xSpan,d0.y+i*ySpan);
-				if(xy.x<0.||xy.x>resolution.x||xy.y<0.||xy.y>resolution.y) break;
+				//if(xy.x<0.||xy.x>resolution.x||xy.y<0.||xy.y>resolution.y) break;
 				float s=length(xy-d0)/totalLen;
 				vec2 uv=xy/resolution;
 
@@ -283,8 +283,9 @@ const ssrMaterial = new THREE.ShaderMaterial({
 				float cW = projectionMatrix[2][3] * vZ+projectionMatrix[3][3];
 				vec3 vP=getViewPosition( uv, d, cW );
 
-                float recipVPZ=1./viewPosition.z;
-                float viewReflectRayZ=1./(recipVPZ+s*(1./d1viewPosition.z-recipVPZ));
+                //float recipVPZ=1./viewPosition.z;
+                //float viewReflectRayZ=1./(recipVPZ+s*(1./d1viewPosition.z-recipVPZ));
+                float viewReflectRayZ = (viewPosition.z * d1viewPosition.z) / ((d1viewPosition.z + s*(viewPosition.z - d1viewPosition.z))+0.01);
                 if(viewReflectRayZ<=vZ){
                     bool hit;
 
@@ -299,77 +300,23 @@ const ssrMaterial = new THREE.ShaderMaterial({
                     minThickness*=3.;
                     float tk=max(minThickness,thickness);
 
+
                     hit=away<=tk;
 
                     if (hit){
                     vec3 vN=getViewNormal( uv );
                     if(dot(viewReflectDir,vN)>=0.) continue;
                     float distance=pointPlaneDistance(vP,viewPosition,viewNormal);
-                    if(distance>maxDistance) break;
-                    float op=0.5;
-                    /*#ifdef DISTANCE_ATTENUATION
-                        float ratio=1.-(distance/maxDistance);
-                        float attenuation=ratio*ratio;
-                        op=opacity*attenuation;
-                    #endif
-                    #ifdef FRESNEL
-                        float fresnelCoe=(dot(viewIncidentDir,viewReflectDir)+1.)/2.;
-                        op*=fresnelCoe;
-                    #endif*/
-                    //vec4 reflectColor=texture2D(tDiffuse,uv);
+                    //if(distance>maxDistance) break;
                     vec3 reflectColor = texture2D(gColor,uv).rgb;
-                    FragColor = vec4(reflectColor, op);
+                    FragColor = vec4(reflectColor, 1.0);
                     return;
                     }  
                 }
 
             }
 
-
-
-            //##############    
-            vec3 viewDirection = normalize(cameraPosition - (cameraNear + linearDepthSample * (cameraFar - cameraNear)));
-            vec3 reflection = reflect(viewDirection, normal);
-            FragColor = vec4(reflection, 1.0);
-
-            vec3 rayOrigin = cameraPosition + viewDirection * (cameraNear + linearDepthSample * (cameraFar - cameraNear));
-            vec3 rayDir = normalize(reflection);
-            vec4 color = vec4(0.0);
-
-            float stepSize = 0.01;
-            int maxSteps = 100;
-            for (int i = 0; i < maxSteps; i++) {
-            // Step 8: Move along the ray
-            rayOrigin += rayDir * stepSize;
-
-            // Step 9: Convert ray origin to normalized device coordinates for depth comparison
-            float currentDepth = (cameraNear * cameraFar) / (cameraFar + cameraNear - rayOrigin.z * cameraFar);
-            float normalizedCurrentDepth = (currentDepth - cameraNear) / (cameraFar - cameraNear);
-            normalizedCurrentDepth = clamp(normalizedCurrentDepth, 0.0, 1.0);
-
-            vec2 screenUV = rayOrigin.xy / rayOrigin.z; // Convert to screen UV coordinates
-            screenUV = 0.5 * screenUV + 0.5; // Map from [-1, 1] to [0, 1]
-            float sceneDepth = texture(gDepth, screenUV).r; // Sample depth buffer
-
-            // Step 11: Check if the current ray's depth is less than the scene depth
-            if (abs(normalizedCurrentDepth - sceneDepth) < 1.0) {
-                // Step 12: Color the pixel yellow if the ray hits an object
-                color = vec4(1.0, 1.0, 0.0, 1.0); // Yellow color
-                FragColor = vec4(1.0, 1.0, 0.0, 1.0);
-                return;
-                break; // Exit the loop on intersection
-            }
-
-            // Optional: Exit if out of bounds
-            if (length(rayOrigin) > 100.0) {
-                FragColor = vec4(1.0, 0.0, 1.0, 1.0);
-                return;
-               // break; // Prevent infinite loops
-            }
-            FragColor = color.a > 0.0 ? color : vec4(albedo, 1.0); // Default to black if no reflection
-    }
-
-
+            FragColor =  vec4(albedo, 1.0); // Default to black if no reflection
         }
     `,
     glslVersion: THREE.GLSL3,
