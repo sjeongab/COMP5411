@@ -31,7 +31,7 @@ scene.add(plane);
 const sphereGeometry = new THREE.SphereGeometry(1, 32, 32);
 const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0x8080ff });
 const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-sphere.position.y = 1;
+sphere.position.y = 1.2;
 sphere.castShadow = true; // Enable shadow casting
 sphere.receiveShadow = false;
 scene.add(sphere);
@@ -86,9 +86,9 @@ const gbufferMaterial = new THREE.ShaderMaterial({
 
         void main() {
             vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-            vViewPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
-            vNormal = normalize(normalMatrix * normal);
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            vViewPosition  = (modelViewMatrix * vec4(position, 1.0)).xyz;
+            vNormal        = normalize(normalMatrix * normal);
+            gl_Position    = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
     `,
     fragmentShader: `
@@ -127,10 +127,12 @@ const ssrMaterial = new THREE.ShaderMaterial({
         gReflection: { value: gReflectionTexture },
         gDepth: { value: depthTexture },
         resolution: { value: new THREE.Vector2(size.width, size.height) },
+
         projectionMatrix: { value: camera.projectionMatrix },
         inverseProjectionMatrix: { value: new THREE.Matrix4() },
         inverseViewMatrix: { value: new THREE.Matrix4() },
-        cameraWorldPosition: { value: controls.camera.position },
+        cameraWorldPosition: { value: camera.position },
+
         cameraNear: { value: camera.near },
         cameraFar: { value: camera.far },
     },
@@ -150,6 +152,7 @@ const ssrMaterial = new THREE.ShaderMaterial({
         uniform sampler2D gReflection;
         uniform sampler2D gDepth;
         uniform vec2 resolution;
+
         uniform mat4 projectionMatrix;
         uniform mat4 inverseProjectionMatrix;
         uniform mat4 inverseViewMatrix;
@@ -160,11 +163,59 @@ const ssrMaterial = new THREE.ShaderMaterial({
 
         out vec4 FragColor;
 
+        float pointToLineDistance(vec3 x0, vec3 x1, vec3 x2) {
+			//x0: point, x1: linePointA, x2: linePointB
+			//https://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
+			return length(cross(x0-x1,x0-x2))/length(x2-x1);
+		}
+		float pointPlaneDistance(vec3 point,vec3 planePoint,vec3 planeNormal){
+			// https://mathworld.wolfram.com/Point-PlaneDistance.html
+			//// https://en.wikipedia.org/wiki/Plane_(geometry)
+			//// http://paulbourke.net/geometry/pointlineplane/
+			float a=planeNormal.x,b=planeNormal.y,c=planeNormal.z;
+			float x0=point.x,y0=point.y,z0=point.z;
+			float x=planePoint.x,y=planePoint.y,z=planePoint.z;
+			float d=-(a*x+b*y+c*z);
+			float distance=(a*x0+b*y0+c*z0+d)/sqrt(a*a+b*b+c*c);
+			return distance;
+		}
+
+        float getDepth( const in vec2 uv ) {
+			return texture2D( gDepth, uv ).r;
+		}
+		float getViewZ( const in float depth ) {
+			#ifdef PERSPECTIVE_CAMERA
+				return perspectiveDepthToViewZ( depth, cameraNear, cameraFar );
+			#else
+				return orthographicDepthToViewZ( depth, cameraNear, cameraFar );
+			#endif
+		}
+
         float linearDepth(float depthSample) {
             float z = depthSample * 2.0 - 1.0;
             float d =  (cameraNear * cameraFar ) / (cameraFar + cameraNear - z * (cameraFar));
             return (d - cameraNear) / (cameraFar - cameraNear);
         }
+
+        vec3 getViewPosition( const in vec2 uv, const in float depth/*clip space*/, const in float clipW ) {
+			vec4 clipPosition = vec4( ( vec3( uv, depth ) - 0.5 ) * 2.0, 1.0 );//ndc
+			clipPosition *= clipW; //clip
+			return ( inverseProjectionMatrix * clipPosition ).xyz;//view
+		}
+		vec3 getViewNormal( const in vec2 uv ) {
+			return unpackRGBToNormal( texture2D( gNormal, uv ).xyz );
+		}
+
+        vec2 viewPositionToXY(vec3 viewPosition){
+			vec2 xy;
+			vec4 clip=projectionMatrix*vec4(viewPosition,1);
+			xy=clip.xy;//clip
+			float clipW=clip.w;
+			xy/=clipW;//NDC
+			xy=(xy+1.)/2.;//uv
+			xy*=resolution;//screen
+			return xy;
+		}
 
         void main() {
             vec2 uv = gl_FragCoord.xy / resolution;
@@ -173,13 +224,110 @@ const ssrMaterial = new THREE.ShaderMaterial({
             vec3 position = texture(gPosition, uv).xyz;
             float reflectivity = texture(gReflection, uv).r;
             float depth = texture(gDepth, uv).r;
+            float viewZ = perspectiveDepthToViewZ( depth, cameraNear, cameraFar );
             float linearDepthSample = linearDepth(depth);
+            float thickness = 0.018;
+
+            if(-viewZ>cameraFar) {
+                FragColor = vec4(albedo, 1.0);
+                return;
+            }
 
             if (reflectivity < 0.5 ) {
                 FragColor = vec4(albedo, 1.0);
                 return;
             }
 
+            float clipW = projectionMatrix[2][3] * viewZ+projectionMatrix[3][3];
+            vec3 viewPosition=getViewPosition( uv, depth, clipW );
+
+            vec2 d0=gl_FragCoord.xy;
+			vec2 d1;
+
+			vec3 viewNormal=getViewNormal( uv );
+
+            vec3 viewIncidentDir=normalize(viewPosition);
+            vec3 viewReflectDir=reflect(viewIncidentDir,viewNormal);
+
+            float maxDistance = 180.0;
+            float maxReflectRayLen=maxDistance/dot(-viewIncidentDir,viewNormal);
+
+
+            vec3 d1viewPosition=viewPosition+viewReflectDir*maxReflectRayLen;
+            if(d1viewPosition.z>-cameraNear){
+					//https://tutorial.math.lamar.edu/Classes/CalcIII/EqnsOfLines.aspx
+					float t=(-cameraNear-viewPosition.z)/viewReflectDir.z;
+					d1viewPosition=viewPosition+viewReflectDir*t;
+            }
+            d1=viewPositionToXY(d1viewPosition);
+
+			float totalLen=length(d1-d0);
+			float xLen=d1.x-d0.x;
+			float yLen=d1.y-d0.y;
+			float totalStep=max(abs(xLen),abs(yLen));
+			float xSpan=xLen/totalStep;
+			float ySpan=yLen/totalStep;
+
+            int MAX_STEP = 800;
+
+            for(float i=0.;i<float(MAX_STEP);i++){
+				if(i>=totalStep) break;
+				vec2 xy=vec2(d0.x+i*xSpan,d0.y+i*ySpan);
+				if(xy.x<0.||xy.x>resolution.x||xy.y<0.||xy.y>resolution.y) break;
+				float s=length(xy-d0)/totalLen;
+				vec2 uv=xy/resolution;
+
+                float d = getDepth(uv);
+				float vZ = getViewZ( d );
+                if(-vZ>=cameraFar) continue;
+				float cW = projectionMatrix[2][3] * vZ+projectionMatrix[3][3];
+				vec3 vP=getViewPosition( uv, d, cW );
+
+                float recipVPZ=1./viewPosition.z;
+                float viewReflectRayZ=1./(recipVPZ+s*(1./d1viewPosition.z-recipVPZ));
+                if(viewReflectRayZ<=vZ){
+                    bool hit;
+
+                    float away=pointToLineDistance(vP,viewPosition,d1viewPosition);
+
+                    float minThickness;
+                    vec2 xyNeighbor=xy;
+                    xyNeighbor.x+=1.;
+                    vec2 uvNeighbor=xyNeighbor/resolution;
+                    vec3 vPNeighbor=getViewPosition(uvNeighbor,d,cW);
+                    minThickness=vPNeighbor.x-vP.x;
+                    minThickness*=3.;
+                    float tk=max(minThickness,thickness);
+
+                    hit=away<=tk;
+
+                    if (hit){
+                    vec3 vN=getViewNormal( uv );
+                    if(dot(viewReflectDir,vN)>=0.) continue;
+                    float distance=pointPlaneDistance(vP,viewPosition,viewNormal);
+                    if(distance>maxDistance) break;
+                    float op=0.5;
+                    /*#ifdef DISTANCE_ATTENUATION
+                        float ratio=1.-(distance/maxDistance);
+                        float attenuation=ratio*ratio;
+                        op=opacity*attenuation;
+                    #endif
+                    #ifdef FRESNEL
+                        float fresnelCoe=(dot(viewIncidentDir,viewReflectDir)+1.)/2.;
+                        op*=fresnelCoe;
+                    #endif*/
+                    //vec4 reflectColor=texture2D(tDiffuse,uv);
+                    vec3 reflectColor = texture2D(gColor,uv).rgb;
+                    FragColor = vec4(reflectColor, op);
+                    return;
+                    }  
+                }
+
+            }
+
+
+
+            //##############    
             vec3 viewDirection = normalize(cameraPosition - (cameraNear + linearDepthSample * (cameraFar - cameraNear)));
             vec3 reflection = reflect(viewDirection, normal);
             FragColor = vec4(reflection, 1.0);
@@ -188,8 +336,8 @@ const ssrMaterial = new THREE.ShaderMaterial({
             vec3 rayDir = normalize(reflection);
             vec4 color = vec4(0.0);
 
-            float stepSize = 0.1;
-            int maxSteps = 10;
+            float stepSize = 0.01;
+            int maxSteps = 100;
             for (int i = 0; i < maxSteps; i++) {
             // Step 8: Move along the ray
             rayOrigin += rayDir * stepSize;
@@ -204,21 +352,21 @@ const ssrMaterial = new THREE.ShaderMaterial({
             float sceneDepth = texture(gDepth, screenUV).r; // Sample depth buffer
 
             // Step 11: Check if the current ray's depth is less than the scene depth
-            if (normalizedCurrentDepth <= sceneDepth) {
+            if (abs(normalizedCurrentDepth - sceneDepth) < 1.0) {
                 // Step 12: Color the pixel yellow if the ray hits an object
                 color = vec4(1.0, 1.0, 0.0, 1.0); // Yellow color
-                FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+                FragColor = vec4(1.0, 1.0, 0.0, 1.0);
                 return;
                 break; // Exit the loop on intersection
             }
 
             // Optional: Exit if out of bounds
             if (length(rayOrigin) > 100.0) {
-                FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+                FragColor = vec4(1.0, 0.0, 1.0, 1.0);
                 return;
                // break; // Prevent infinite loops
             }
-            FragColor = color.a > 0.0 ? color : vec4(0.0, 0.0, 0.0, 1.0); // Default to black if no reflection
+            FragColor = color.a > 0.0 ? color : vec4(albedo, 1.0); // Default to black if no reflection
     }
 
 
