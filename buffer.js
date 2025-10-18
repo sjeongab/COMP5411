@@ -41,11 +41,11 @@ scene.add(ambientLight);
 
 // Move the light further back to illuminate a larger area
 const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-dirLight.position.set(50, 50, 50); // موقعیت نور جدید
+dirLight.position.set(50, 50, 50); // new light position
 dirLight.castShadow = true;
 dirLight.shadow.mapSize.set(1024, 1024);
 dirLight.shadow.camera.near = 0.5;
-dirLight.shadow.camera.far = 100; // افزایش فاصله دورترین نور
+dirLight.shadow.camera.far = 100; // increase light's far distance
 scene.add(dirLight);
 
 // 2) G-buffer MRT
@@ -108,7 +108,7 @@ const gbufferMaterial = new THREE.ShaderMaterial({
   glslVersion: THREE.GLSL3,
 });
 
-// 4) SSR material (بدون فرنل و edge-fade و بدون self-hit reject)
+// 4) SSR material (no Fresnel, no edge-fade, no self-hit reject)
 const ssrMaterial = new THREE.ShaderMaterial({
   uniforms: {
     gColor:      { value: gColorTexture },
@@ -157,7 +157,7 @@ const ssrMaterial = new THREE.ShaderMaterial({
 
       if (reflectivity <= 0.0) { FragColor = vec4(albedo, 1.0); return; }
 
-      // ۱) Normal Bias
+      // 1) Normal Bias
       vec3 viewDir       = normalize(cameraWorldPosition - position);
       vec3 reflectionDir = reflect(-viewDir, normal);
       vec3 rayOrigin     = position + normal * 0.02;
@@ -165,7 +165,7 @@ const ssrMaterial = new THREE.ShaderMaterial({
       vec3 currentPos    = rayOrigin;
 
       vec4 reflectionColor = vec4(0.0);
-      float stepSize = 0.08;  // ۴) قدم
+      float stepSize = 0.08;  // 4) step length
       int   maxSteps = 50;
 
       for (int i = 0; i < maxSteps; i++) {
@@ -180,20 +180,20 @@ const ssrMaterial = new THREE.ShaderMaterial({
         if (cuv.x < 0.0 || cuv.x > 1.0 || cuv.y < 0.0 || cuv.y > 1.0) break;
 
         float sampledDepth = texture(gDepth, cuv).r;
-        if (sampledDepth >= 0.999) break; // ۲) بک‌گراند
+        if (sampledDepth >= 0.999) break; // 2) background
 
-        // عمق خطی رِی و صحنه
+        // linear depth of ray and scene
         float rayDepthNDC      = clip.z * 0.5 + 0.5;
         float linearRayDepth   = linearDepth(rayDepthNDC);
         float linearSceneDepth = linearDepth(sampledDepth);
 
-        // thickness تطبیقی (ریز)
+        // adaptive thickness (fine)
         float distance01 = clamp((linearSceneDepth - cameraNear) / (cameraFar - cameraNear), 0.0, 1.0);
         float thickness  = mix(0.015, 0.045, distance01);
         thickness = max(thickness, stepSize * 0.75);
 
         if (abs(linearSceneDepth - linearRayDepth) < thickness) {
-          // ۵) Binary Search (۴ مرحله)
+          // 5) Binary Search (4 steps)
           vec3 aPos = prevPos, bPos = currentPos;
           vec2 hitUV = cuv;
 
@@ -224,7 +224,7 @@ const ssrMaterial = new THREE.ShaderMaterial({
         }
       }
 
-      // ❌ بدون فرنل/فید
+      // no fresnel/fade
       float mixAmount = clamp(reflectivity, 0.0, 1.0);
       FragColor = mix(vec4(albedo, 1.0), reflectionColor, mixAmount);
     }
