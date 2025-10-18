@@ -2,7 +2,7 @@
 import { addCube } from './cube.js'
 import { addSphere } from './sphere.js'
 import * as THREE from 'three'
-import { gBufferMaterial } from '../gBuffer/gBuffer.js'  // متریال پاس G-buffer
+import { gBufferMaterial } from '../gBuffer/gBuffer.js'  // G-buffer pass material
 
 const objects = [
   {type: 'plane'},
@@ -44,10 +44,10 @@ function addObjects(scene) {
 }
 
 /**
- * مارکر کره‌ایِ سفید در مکان نور:
- * - از gBufferMaterial.clone() استفاده می‌کنیم تا داخل MRT/G-buffer نوشته شود
- * - Reflectivity=0 تا خودش بازتاب نشود
- * - isInteractive=false تا در setupInteractiveObjects دستکاری نشود
+ * White spherical marker at the light position:
+ * - Use gBufferMaterial.clone() so it writes into the MRT/G-buffer
+ * - Reflectivity = 0 so it does not reflect itself
+ * - isInteractive = false so it won't be altered in setupInteractiveObjects
  */
 function addLightMarker(scene, position = [10, 20, 10], radius = 3.0) {
   const mat = gBufferMaterial.clone();
