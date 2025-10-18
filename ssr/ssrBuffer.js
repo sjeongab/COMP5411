@@ -20,12 +20,21 @@ const ssrBufferMaterial = new THREE.RawShaderMaterial({
     fragmentShader: ssrFragmentShader,
     glslVersion: THREE.GLSL3,
     uniforms: {
-        gBufferTexture: { value: gBuffer.texture },
-        depthBuffer: { value: gBuffer.depthTexture },
-        finalSceneTexture: { value: gBuffer.texture },
-        inverseProjectionMatrix: { value: new THREE.Matrix4() },
-        inverseViewMatrix: { value: new THREE.Matrix4() },
-    },
+            gColor: { value: gBuffer.texture[0] },
+            gNormal: { value: gBuffer.texture[1] },
+            gPosition: { value: gBuffer.texture[2] },
+            gReflection: { value: gBuffer.texture[3] },
+            gDepth: { value: gBuffer.depthTexture },
+            resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+    
+            projectionMatrix: { value: camera.projectionMatrix },
+            inverseProjectionMatrix: { value: new THREE.Matrix4() },
+            inverseViewMatrix: { value: new THREE.Matrix4() },
+            cameraWorldPosition: { value: camera.position },
+    
+            cameraNear: { value: camera.near },
+            cameraFar: { value: camera.far },
+        }
 });
 
 export {ssrBuffer, ssrBufferMaterial};

@@ -1,19 +1,14 @@
 const gBufferVertexShader = `
-  precision highp float;
+    varying vec3 vNormal;
+    varying vec3 vWorldPosition;
+    varying vec3 vViewPosition;
 
-  in vec3 position;
-  in vec3 normal;
-  
-  uniform mat4 normalMatrix;
-  uniform mat4 modelViewMatrix;
-  uniform mat4 projectionMatrix;
-  
-  out vec3 vNormal;
-  
-  void main() {
-      vNormal = (normalMatrix * vec4(normal, 0.0)).xyz;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
+    void main() {
+        vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+        vViewPosition  = (modelViewMatrix * vec4(position, 1.0)).xyz;
+        vNormal        = normalize(normalMatrix * normal);
+        gl_Position    = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
 `;
 
 export {gBufferVertexShader}

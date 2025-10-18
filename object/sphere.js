@@ -3,8 +3,17 @@ import {gBufferMaterial} from '../gBuffer/gBuffer.js'
 
 function addSphere(scene, config) {
     var sphereGeometry = new THREE.SphereGeometry(config.scale, 32, 16);
-    var sphereMaterial = new THREE.MeshPhongMaterial({ color: config.color, reflectivity: 0 });
-    var sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    const sphereGbufferMaterial = new THREE.ShaderMaterial({
+              uniforms: {
+                  uColor: { value: config.color },
+                  uReflectivity: {value: 0.0},
+              },
+              // Same vertex and fragment shader as before
+              vertexShader: gBufferMaterial.vertexShader,
+              fragmentShader: gBufferMaterial.fragmentShader,
+              glslVersion:THREE.GLSL3,
+          });
+    var sphere = new THREE.Mesh(sphereGeometry, sphereGbufferMaterial);
     sphere.position.set(...config.position);
     scene.add(sphere);
 }
