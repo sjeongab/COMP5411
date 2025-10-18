@@ -1,4 +1,5 @@
 import {addObjects} from './object/addObjects.js'
+import {addSkyBox} from './object/addSkyBox.js'
 
 import * as THREE from 'three'
 import { OrbitControls } from 'OrbitControls'
@@ -13,7 +14,6 @@ let cameraControls;
 const MODE = "SSR";
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x4422bb);
 const ssrScene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
 camera.position.set(0, 75, 160);
@@ -31,7 +31,46 @@ cameraControls.update();
 import {ssrVertexShader} from './ssr/ssrVertexShader.js';
 import {ssrFragmentShader} from './ssr/ssrFragmentShader.js';
 
+const cubeLoader = new THREE.CubeTextureLoader();
+const skyboxTexture = cubeLoader.load([
+  'https://threejs.org/examples/textures/cube/Park3Med/px.jpg',
+  'https://threejs.org/examples/textures/cube/Park3Med/nx.jpg',
+  'https://threejs.org/examples/textures/cube/Park3Med/py.jpg',
+  'https://threejs.org/examples/textures/cube/Park3Med/ny.jpg',
+  'https://threejs.org/examples/textures/cube/Park3Med/pz.jpg',
+  'https://threejs.org/examples/textures/cube/Park3Med/nz.jpg'
+]);
 
+const skyboxMaterial = new THREE.ShaderMaterial({
+  uniforms: { tCube: { value: skyboxTexture } },
+  vertexShader: `
+    varying vec3 v_normal;
+    void main() {
+        v_normal = position;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform samplerCube tCube;
+    varying vec3 v_normal;
+    void main() {
+        gl_FragColor = textureCube(tCube, v_normal);
+    }
+  `,
+  side: THREE.BackSide, // Render the inside of the cube
+  depthWrite: false, // Prevents the skybox from being written to the depth buffer
+});
+
+const skyboxGeometry = new THREE.BoxGeometry(1000, 1000, 1000);
+const skyboxMesh = new THREE.Mesh(skyboxGeometry, skyboxMaterial);
+
+// 3. Create a separate scene for the skybox
+const skyboxScene = new THREE.Scene();
+skyboxScene.add(skyboxMesh);
+
+skyboxMesh.onBeforeRender = function(renderer, scene, camera) {
+  this.position.copy(camera.position);
+};
 
 const ssrBufferMaterial = new THREE.ShaderMaterial({
     vertexShader: ssrVertexShader,
@@ -43,6 +82,7 @@ const ssrBufferMaterial = new THREE.ShaderMaterial({
             gPosition: { value: gPositionTexture },
             gReflection: { value: gReflectionTexture },
             gDepth: { value: gBuffer.depthTexture },
+            gBackground: {value: skyboxTexture},
             resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
     
             projectionMatrix: { value: ssrCamera.projectionMatrix },
@@ -56,7 +96,10 @@ const ssrBufferMaterial = new THREE.ShaderMaterial({
 });
 
 
+
+
 addObjects(scene);
+addSkyBox(scene);
 
 
 // Add lights
@@ -80,7 +123,6 @@ function animate() {
     composer.render();
   }
   else if (MODE == "SSR"){
-
   ssrBufferMaterial.uniforms.inverseProjectionMatrix.value.copy(ssrCamera.projectionMatrix).invert();
   ssrBufferMaterial.uniforms.inverseViewMatrix.value.copy(ssrCamera.matrixWorldInverse).invert();
   ssrBufferMaterial.uniforms.cameraWorldPosition.value.copy(ssrCamera.position);
@@ -92,7 +134,9 @@ function animate() {
 
   // 2. SSR Pass: Render to screen using the buffers
   renderer.setRenderTarget(null);
+  renderer.render(skyboxScene, camera);
   renderer.render(ssrScene, ssrCamera);
+  
   }
 }
 

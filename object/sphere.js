@@ -6,9 +6,8 @@ function addSphere(scene, config) {
     const sphereGbufferMaterial = new THREE.ShaderMaterial({
               uniforms: {
                   uColor: { value: config.color },
-                  uReflectivity: {value: 1.0},
+                  uReflectivity: {value: config.reflectivity},
               },
-              // Same vertex and fragment shader as before
               vertexShader: gBufferMaterial.vertexShader,
               fragmentShader: gBufferMaterial.fragmentShader,
               glslVersion:THREE.GLSL3,

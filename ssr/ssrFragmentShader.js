@@ -9,6 +9,7 @@ const ssrFragmentShader = `
         uniform sampler2D gReflection;
         uniform sampler2D gDepth;
         uniform vec2 resolution;
+        uniform samplerCube gBackground;
 
         uniform mat4 projectionMatrix;
         uniform mat4 inverseProjectionMatrix;
@@ -85,19 +86,31 @@ const ssrFragmentShader = `
             float viewZ = perspectiveDepthToViewZ( depth, cameraNear, cameraFar );
             float linearDepthSample = linearDepth(depth);
             float thickness = 0.018;
-
-            if(-viewZ>cameraFar) {
-                FragColor = vec4(albedo, 1.0);
-                return;
-            }
-
-            if (reflectivity < 0.5 ) {
-                FragColor = vec4(albedo, 1.0);
-                return;
-            }
-
+            vec3 objectColor;
             float clipW = projectionMatrix[2][3] * viewZ+projectionMatrix[3][3];
             vec3 viewPosition=getViewPosition( uv, depth, clipW );
+            bool coloured = false;
+
+            for(int j = 0; j<1; j++){
+            if(-viewZ>cameraFar) {
+                objectColor = vec3(1.0,0.0,0.0);
+                //objectColor = textureCube(gBackground, viewPosition).rgb;
+                coloured = true;
+                break;
+            }
+
+            if (reflectivity < 0.3 ) { 
+            objectColor = textureCube(gBackground, viewPosition).rgb;
+            coloured = true;
+            break;
+            }
+
+            if (reflectivity < 1.0 ) { 
+            objectColor = albedo;
+                coloured = true;
+                break;
+            }
+            
 
             vec2 d0=gl_FragCoord.xy;
 			vec2 d1;
@@ -171,15 +184,46 @@ const ssrFragmentShader = `
                     float distance=pointPlaneDistance(vP,viewPosition,viewNormal);
                     if(distance>maxDistance) break;
                     vec3 reflectColor = texture2D(gColor,uv).rgb;
-                    FragColor = vec4(reflectColor, 1.0);
-                    //FragColor = vec4(1.0, 0.0, 1.0, 1.0);
-                    return;
+                    objectColor = reflectColor;
+                    coloured = true;
+                    break;
                     }  
                 }
 
             }
+                if(!coloured){
+                objectColor =  albedo;
+                }
+            }
 
-            FragColor =  vec4(albedo, 1.0);
+
+            //**********add phong shading
+            vec3 lightPos = vec3(0, 30, 100);
+            vec3 lightColor = vec3(1.0, 1.0, 1.0);
+            float shininess = 0.5;
+            // Calculate the light direction (from the fragment to the light)
+            vec3 lightDir = normalize(lightPos - position);
+            
+            // Calculate the view direction (from the fragment to the camera)
+            vec3 viewDir = normalize(viewPosition - position);
+            
+            // Calculate the reflection direction
+            vec3 reflectDir = reflect(-lightDir, normal);
+            
+            // Ambient component
+            vec3 ambient = 0.4 * lightColor; // Adjust ambient factor as needed
+
+            // Diffuse component (Lambertian reflection)
+            float diff = max(dot(normal, lightDir), 0.0);
+            vec3 diffuse = diff * lightColor;
+
+            // Specular component
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+            vec3 specular = spec * lightColor;
+
+            // Combine all components
+            vec3 result = (ambient + diffuse + specular) * objectColor;
+            FragColor = vec4(result, 1.0);
             return;
         }
     `;
