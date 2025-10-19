@@ -45,12 +45,7 @@ const ssrFragmentShader = `
 			return texture2D( gDepth, uv ).r;
 		}
 		float getViewZ( const in float depth ) {
-			/*#ifdef PERSPECTIVE_CAMERA
-				return perspectiveDepthToViewZ( depth, cameraNear, cameraFar );
-			#else
-				return orthographicDepthToViewZ( depth, cameraNear, cameraFar );
-			#endif*/
-            return orthographicDepthToViewZ( depth, cameraNear, cameraFar );
+			return ( cameraNear * cameraFar ) / ( ( cameraNear - cameraFar ) * depth + cameraFar );
 		}
 
         float linearDepth(float depthSample) {
@@ -87,13 +82,19 @@ const ssrFragmentShader = `
             vec3 position = texture(gPosition, uv).xyz;
             float reflectivity = texture(gReflection, uv).r;
             float depth = texture(gDepth, uv).r;
-            float viewZ = perspectiveDepthToViewZ( depth, cameraNear, cameraFar );
+            float viewZ = getViewZ( depth );
             float linearDepthSample = linearDepth(depth);
             float thickness = 0.018;
             vec3 objectColor;
             float clipW = projectionMatrix[2][3] * viewZ+projectionMatrix[3][3];
             vec3 viewPosition=getViewPosition( uv, depth, clipW );
             bool coloured = false;
+            float alpha = 1.0;
+
+            if (depth >= 0.9999) {
+                FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+                return;
+            }
 
             if(mode==0) {
                 FragColor = vec4(texture(gColor, uv).rgb, 1.0);
@@ -102,20 +103,12 @@ const ssrFragmentShader = `
 
             for(int j = 0; j<1; j++){
             if(-viewZ>cameraFar) {
-                objectColor = vec3(1.0,0.0,0.0);
-                //objectColor = textureCube(gBackground, uv).rgb;
-                coloured = true;
-                break;
+                FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+                return;
             }
 
-            /*if (reflectivity < 0.3 ) { 
-                objectColor = textureCube(gBackground, position).rgb;
-                coloured = true;
-                break;
-            }*/
-
             if (reflectivity < 1.0 ) { 
-            objectColor = albedo;
+                objectColor = albedo;
                 coloured = true;
                 break;
             }
@@ -126,22 +119,15 @@ const ssrFragmentShader = `
 
 			vec3 viewNormal=getViewNormal( uv );
 
-            //vec3 viewIncidentDir=normalize(viewPosition);
-            //vec3 viewReflectDir=reflect(viewIncidentDir,viewNormal);
-
             vec3 viewIncidentDir=vec3(0,0,-1);
             vec3 viewReflectDir=reflect(viewIncidentDir,viewNormal);
+
 
             float maxDistance = 1500.0;
             float maxReflectRayLen=maxDistance/dot(-viewIncidentDir,viewNormal);
 
 
             vec3 d1viewPosition=viewPosition+viewReflectDir*maxReflectRayLen;
-            /*if(d1viewPosition.z>-cameraNear){
-					//https://tutorial.math.lamar.edu/Classes/CalcIII/EqnsOfLines.aspx
-					float t=(-cameraNear-viewPosition.z)/viewReflectDir.z;
-					d1viewPosition=viewPosition+viewReflectDir*t;
-            }*/
             d1=viewPositionToXY(d1viewPosition);
 
 			float totalLen=length(d1-d0);
@@ -156,7 +142,6 @@ const ssrFragmentShader = `
             for(float i=0.;i<float(MAX_STEP);i++){
 				if(i>=totalStep) break;
 				vec2 xy=vec2(d0.x+i*xSpan,d0.y+i*ySpan);
-				//if(xy.x<0.||xy.x>resolution.x||xy.y<0.||xy.y>resolution.y) break;
 				float s=length(xy-d0)/totalLen;
 				vec2 uv=xy/resolution;
 
@@ -166,9 +151,6 @@ const ssrFragmentShader = `
 				float cW = projectionMatrix[2][3] * vZ+projectionMatrix[3][3];
 				vec3 vP=getViewPosition( uv, d, cW );
 
-                //float recipVPZ=1./viewPosition.z;
-                //float viewReflectRayZ=1./(recipVPZ+s*(1./d1viewPosition.z-recipVPZ));
-                //float viewReflectRayZ = (viewPosition.z * d1viewPosition.z) / ((d1viewPosition.z + s*(viewPosition.z - d1viewPosition.z))+0.01);
                 float viewReflectRayZ=viewPosition.z+s*(d1viewPosition.z-viewPosition.z);
                 if(viewReflectRayZ<=vZ){
                     bool hit;
@@ -201,7 +183,7 @@ const ssrFragmentShader = `
 
             }
                 if(!coloured){
-                objectColor =  albedo;
+                objectColor = albedo; 
                 }
             }
 
@@ -232,7 +214,7 @@ const ssrFragmentShader = `
 
             // Combine all components
             vec3 result = (ambient + diffuse + specular) * objectColor;
-            FragColor = vec4(result, 1.0);
+            FragColor = vec4(result, alpha);
             return;
         }
     `;
