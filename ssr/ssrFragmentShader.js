@@ -17,9 +17,12 @@ const ssrFragmentShader = `
         uniform vec3 cameraWorldPosition;
         uniform float cameraNear;
         uniform float cameraFar;
+        uniform int mode;
         
 
         out vec4 FragColor;
+
+        
 
         float pointToLineDistance(vec3 x0, vec3 x1, vec3 x2) {
 			//x0: point, x1: linePointA, x2: linePointB
@@ -77,6 +80,7 @@ const ssrFragmentShader = `
 		}
 
         void main() {
+        
             vec2 uv = gl_FragCoord.xy / resolution;
             vec3 albedo = texture(gColor, uv).rgb;
             vec3 normal = texture(gNormal, uv).xyz;
@@ -90,6 +94,11 @@ const ssrFragmentShader = `
             float clipW = projectionMatrix[2][3] * viewZ+projectionMatrix[3][3];
             vec3 viewPosition=getViewPosition( uv, depth, clipW );
             bool coloured = false;
+
+            if(mode==0) {
+                FragColor = vec4(texture(gColor, uv).rgb, 1.0);
+                return;
+            }
 
             for(int j = 0; j<1; j++){
             if(-viewZ>cameraFar) {

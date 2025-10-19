@@ -72,7 +72,9 @@ skyboxMesh.onBeforeRender = function(renderer, scene, camera) {
   this.position.copy(camera.position);
 };
 
-const ssrBufferMaterial = new THREE.ShaderMaterial({
+let ssrBufferMaterial;
+if (MODE == "scene"){
+ssrBufferMaterial = new THREE.ShaderMaterial({
     vertexShader: ssrVertexShader,
     fragmentShader: ssrFragmentShader,
     glslVersion: THREE.GLSL3,
@@ -92,8 +94,37 @@ const ssrBufferMaterial = new THREE.ShaderMaterial({
     
             cameraNear: { value: ssrCamera.near },
             cameraFar: { value: ssrCamera.far },
+
+            mode: {value: 0},
         }
 });
+}
+else if (MODE == "SSR"){
+ssrBufferMaterial = new THREE.ShaderMaterial({
+    vertexShader: ssrVertexShader,
+    fragmentShader: ssrFragmentShader,
+    glslVersion: THREE.GLSL3,
+    uniforms: {
+            gColor: { value: gColorTexture },
+            gNormal: { value: gNormalTexture },
+            gPosition: { value: gPositionTexture },
+            gReflection: { value: gReflectionTexture },
+            gDepth: { value: gBuffer.depthTexture },
+            gBackground: {value: skyboxTexture},
+            resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+    
+            projectionMatrix: { value: ssrCamera.projectionMatrix },
+            inverseProjectionMatrix: { value: new THREE.Matrix4() },
+            inverseViewMatrix: { value: new THREE.Matrix4() },
+            cameraWorldPosition: { value: ssrCamera.position },
+    
+            cameraNear: { value: ssrCamera.near },
+            cameraFar: { value: ssrCamera.far },
+
+            mode: {value: 1},
+        }
+}); 
+}
 
 
 
@@ -117,12 +148,6 @@ ssrScene.add(postProcessQuad);
 function animate() {
   requestAnimationFrame(animate);
   cameraControls.update();
-  if (MODE == "scene"){
-    renderer.setRenderTarget(gBuffer);
-    renderer.render(scene, camera);
-    composer.render();
-  }
-  else if (MODE == "SSR"){
   ssrBufferMaterial.uniforms.inverseProjectionMatrix.value.copy(ssrCamera.projectionMatrix).invert();
   ssrBufferMaterial.uniforms.inverseViewMatrix.value.copy(ssrCamera.matrixWorldInverse).invert();
   ssrBufferMaterial.uniforms.cameraWorldPosition.value.copy(ssrCamera.position);
@@ -136,8 +161,6 @@ function animate() {
   renderer.setRenderTarget(null);
   renderer.render(skyboxScene, camera);
   renderer.render(ssrScene, ssrCamera);
-  
-  }
 }
 
 animate();
