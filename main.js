@@ -134,6 +134,7 @@ function animate() {
 
   // 2. SSR Pass: Render to screen using the buffers
   renderer.setRenderTarget(null);
+  renderer.clear();
   renderer.render(skyboxScene, camera);
   renderer.render(ssrScene, ssrCamera);
   
