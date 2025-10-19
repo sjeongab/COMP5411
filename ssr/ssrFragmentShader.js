@@ -94,16 +94,16 @@ const ssrFragmentShader = `
             for(int j = 0; j<1; j++){
             if(-viewZ>cameraFar) {
                 objectColor = vec3(1.0,0.0,0.0);
-                //objectColor = textureCube(gBackground, viewPosition).rgb;
+                //objectColor = textureCube(gBackground, uv).rgb;
                 coloured = true;
                 break;
             }
 
-            if (reflectivity < 0.3 ) { 
-            objectColor = textureCube(gBackground, viewPosition).rgb;
-            coloured = true;
-            break;
-            }
+            /*if (reflectivity < 0.3 ) { 
+                objectColor = textureCube(gBackground, position).rgb;
+                coloured = true;
+                break;
+            }*/
 
             if (reflectivity < 1.0 ) { 
             objectColor = albedo;
