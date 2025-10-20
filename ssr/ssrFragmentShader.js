@@ -17,14 +17,22 @@ const ssrFragmentShader = `
         uniform vec3 cameraWorldPosition;
         uniform float cameraNear;
         uniform float cameraFar;
+        uniform int mode;
         
 
         out vec4 FragColor;
 
+        
+
         float pointToLineDistance(vec3 x0, vec3 x1, vec3 x2) {
+			//x0: point, x1: linePointA, x2: linePointB
+			//https://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
 			return length(cross(x0-x1,x0-x2))/length(x2-x1);
 		}
 		float pointPlaneDistance(vec3 point,vec3 planePoint,vec3 planeNormal){
+			// https://mathworld.wolfram.com/Point-PlaneDistance.html
+			//// https://en.wikipedia.org/wiki/Plane_(geometry)
+			//// http://paulbourke.net/geometry/pointlineplane/
 			float a=planeNormal.x,b=planeNormal.y,c=planeNormal.z;
 			float x0=point.x,y0=point.y,z0=point.z;
 			float x=planePoint.x,y=planePoint.y,z=planePoint.z;
@@ -37,7 +45,7 @@ const ssrFragmentShader = `
 			return texture2D( gDepth, uv ).r;
 		}
 		float getViewZ( const in float depth ) {
-            return perspectiveDepthToViewZ( depth, cameraNear, cameraFar );
+			return ( cameraNear * cameraFar ) / ( ( cameraNear - cameraFar ) * depth + cameraFar );
 		}
 
         float linearDepth(float depthSample) {
@@ -67,36 +75,40 @@ const ssrFragmentShader = `
 		}
 
         void main() {
+        
             vec2 uv = gl_FragCoord.xy / resolution;
             vec3 albedo = texture(gColor, uv).rgb;
             vec3 normal = texture(gNormal, uv).xyz;
             vec3 position = texture(gPosition, uv).xyz;
             float reflectivity = texture(gReflection, uv).r;
             float depth = texture(gDepth, uv).r;
-            float viewZ = perspectiveDepthToViewZ( depth, cameraNear, cameraFar );
+            float viewZ = getViewZ( depth );
             float linearDepthSample = linearDepth(depth);
             float thickness = 0.018;
             vec3 objectColor;
             float clipW = projectionMatrix[2][3] * viewZ+projectionMatrix[3][3];
             vec3 viewPosition=getViewPosition( uv, depth, clipW );
             bool coloured = false;
+            float alpha = 1.0;
+
+            if (depth >= 0.9999) {
+                FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+                return;
+            }
+
+            if(mode==0) {
+                FragColor = vec4(texture(gColor, uv).rgb, 1.0);
+                return;
+            }
 
             for(int j = 0; j<1; j++){
             if(-viewZ>cameraFar) {
-                objectColor = vec3(1.0,0.0,0.0);
-                //objectColor = textureCube(gBackground, uv).rgb;
-                coloured = true;
-                break;
+                FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+                return;
             }
 
-            /*if (reflectivity < 0.3 ) { 
-                objectColor = textureCube(gBackground, position).rgb;
-                coloured = true;
-                break;
-            }*/
-
             if (reflectivity < 1.0 ) { 
-            objectColor = albedo;
+                objectColor = albedo;
                 coloured = true;
                 break;
             }
@@ -107,22 +119,15 @@ const ssrFragmentShader = `
 
 			vec3 viewNormal=getViewNormal( uv );
 
-            //vec3 viewIncidentDir=normalize(viewPosition);
-            //vec3 viewReflectDir=reflect(viewIncidentDir,viewNormal);
-
             vec3 viewIncidentDir=vec3(0,0,-1);
             vec3 viewReflectDir=reflect(viewIncidentDir,viewNormal);
+
 
             float maxDistance = 1500.0;
             float maxReflectRayLen=maxDistance/dot(-viewIncidentDir,viewNormal);
 
 
             vec3 d1viewPosition=viewPosition+viewReflectDir*maxReflectRayLen;
-            if(d1viewPosition.z>-cameraNear){
-                //https://tutorial.math.lamar.edu/Classes/CalcIII/EqnsOfLines.aspx
-                float t=(-cameraNear-viewPosition.z)/viewReflectDir.z;
-                d1viewPosition=viewPosition+viewReflectDir*t;
-            }
             d1=viewPositionToXY(d1viewPosition);
 
 			float totalLen=length(d1-d0);
@@ -137,7 +142,6 @@ const ssrFragmentShader = `
             for(float i=0.;i<float(MAX_STEP);i++){
 				if(i>=totalStep) break;
 				vec2 xy=vec2(d0.x+i*xSpan,d0.y+i*ySpan);
-				//if(xy.x<0.||xy.x>resolution.x||xy.y<0.||xy.y>resolution.y) break;
 				float s=length(xy-d0)/totalLen;
 				vec2 uv=xy/resolution;
 
@@ -147,7 +151,7 @@ const ssrFragmentShader = `
 				float cW = projectionMatrix[2][3] * vZ+projectionMatrix[3][3];
 				vec3 vP=getViewPosition( uv, d, cW );
 
-                float viewReflectRayZ = (viewPosition.z * d1viewPosition.z) / ((d1viewPosition.z + s*(viewPosition.z - d1viewPosition.z))+0.01);
+                float viewReflectRayZ=viewPosition.z+s*(d1viewPosition.z-viewPosition.z);
                 if(viewReflectRayZ<=vZ){
                     bool hit;
 
@@ -179,32 +183,38 @@ const ssrFragmentShader = `
 
             }
                 if(!coloured){
-                objectColor =  albedo;
+                objectColor = albedo; 
                 }
             }
 
 
             //**********add phong shading
-            vec3 lightDir = normalize(vec3(0, 30, 100) - position);
-            vec3 viewDir = normalize(-position); // In view space, camera is at (0, 0, 0)
-
-            // === Ambient Component ===
-            vec3 ambient = 0.7 * objectColor;
-
-            // === Diffuse Component ===
-            float diff = max(dot(normal, lightDir), 0.0);
-            vec3 diffuse = vec3(0.5, 0.5, 0.8) * (diff * objectColor) * 0.5;
-
-            // === Specular Component ===
-            vec3 reflectDir = reflect(-lightDir, normal);
-            float spec = pow(max(dot(viewDir, reflectDir), 0.0), 0.1);
-            vec3 specular = vec3(0.1, 0.1, 0.1) * (spec * vec3(1.0, 1.0, 1.0));
-
-            // === Combine components and output color ===
-            vec3 result = ambient + diffuse + specular;
-
+            vec3 lightPos = vec3(0, 100, 100);
+            vec3 lightColor = vec3(1.0, 1.0, 1.0);
+            float shininess = 0.5;
+            // Calculate the light direction (from the fragment to the light)
+            vec3 lightDir = normalize(lightPos - position);
             
-            FragColor = vec4(result, 1.0);
+            // Calculate the view direction (from the fragment to the camera)
+            vec3 viewDir = normalize(viewPosition - position);
+            
+            // Calculate the reflection direction
+            vec3 reflectDir = reflect(-lightDir, normal);
+            
+            // Ambient component
+            vec3 ambient = 0.4 * lightColor; // Adjust ambient factor as needed
+
+            // Diffuse component (Lambertian reflection)
+            float diff = max(dot(normal, lightDir), 0.0);
+            vec3 diffuse = diff * lightColor;
+
+            // Specular component
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+            vec3 specular = spec * lightColor;
+
+            // Combine all components
+            vec3 result = (ambient + diffuse + specular) * objectColor;
+            FragColor = vec4(result, alpha);
             return;
         }
     `;

@@ -1,29 +1,37 @@
 import {addObjects} from './object/addObjects.js'
-import {addSkyBox} from './object/addSkyBox.js'
-
 import * as THREE from 'three'
 import { OrbitControls } from 'OrbitControls'
-//import { ssrBuffer, ssrBufferMaterial } from './ssr/ssrBuffer.js'
 import {gBuffer, gBufferMaterial, gColorTexture, gNormalTexture, gPositionTexture, gReflectionTexture} from './gBuffer/gBuffer.js'
 
-// --- Setup ---
 let cameraControls;
-
-
-//const MODE = "scene";
-const MODE = "SSR";
+let mode = "SSR"; // Default mode
 
 const scene = new THREE.Scene();
 const ssrScene = new THREE.Scene();
+const skyboxScene = new THREE.Scene();
+
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
 camera.position.set(0, 75, 160);
+
 const ssrCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+// Assumes canvas variable exists in HTML
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-cameraControls = new OrbitControls( camera, renderer.domElement );
-cameraControls.target.set( 0, 0, 0 );
+// Set renderer color space
+if ('outputColorSpace' in renderer) {
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+} else if ('outputEncoding' in renderer) {
+  renderer.outputEncoding = THREE.sRGBEncoding;
+}
+
+// Disable auto clear to control background rendering
+renderer.autoClear = false;
+
+cameraControls = new OrbitControls(camera, renderer.domElement);
+cameraControls.target.set(0, 0, 0);
 cameraControls.maxDistance = 400;
 cameraControls.minDistance = 10;
 cameraControls.update();
@@ -31,182 +39,184 @@ cameraControls.update();
 import {ssrVertexShader} from './ssr/ssrVertexShader.js';
 import {ssrFragmentShader} from './ssr/ssrFragmentShader.js';
 
-<<<<<<< Updated upstream
+/* ---------------- Skybox (online) ---------------- */
+const cubeUrls = [
+  'https://threejs.org/examples/textures/cube/Park3Med/px.jpg', // +X
+  'https://threejs.org/examples/textures/cube/Park3Med/nx.jpg', // -X
+  'https://threejs.org/examples/textures/cube/Park3Med/py.jpg', // +Y
+  'https://threejs.org/examples/textures/cube/Park3Med/ny.jpg', // -Y
+  'https://threejs.org/examples/textures/cube/Park3Med/pz.jpg', // +Z
+  'https://threejs.org/examples/textures/cube/Park3Med/nz.jpg'  // -Z
+];
+
 const cubeLoader = new THREE.CubeTextureLoader();
-const skyboxTexture = cubeLoader.load([
-  'https://threejs.org/examples/textures/cube/Park3Med/px.jpg',
-  'https://threejs.org/examples/textures/cube/Park3Med/nx.jpg',
-  'https://threejs.org/examples/textures/cube/Park3Med/py.jpg',
-  'https://threejs.org/examples/textures/cube/Park3Med/ny.jpg',
-  'https://threejs.org/examples/textures/cube/Park3Med/pz.jpg',
-  'https://threejs.org/examples/textures/cube/Park3Med/nz.jpg'
-]);
+if (cubeLoader.setCrossOrigin) cubeLoader.setCrossOrigin('anonymous');
 
+const skyboxTexture = cubeLoader.load(
+  cubeUrls,
+  () => console.log('[skybox] Successfully loaded'),
+  (progress) => console.log('[skybox] Loading progress:', progress),
+  (err) => console.error('[skybox] Failed to load:', err)
+);
+
+// Correct cube texture color space
+if ('SRGBColorSpace' in THREE) {
+  skyboxTexture.colorSpace = THREE.SRGBColorSpace;
+} else if ('sRGBEncoding' in THREE) {
+  skyboxTexture.encoding = THREE.sRGBEncoding;
+}
+
+// Use Three.js built-in cube shader for skybox
 const skyboxMaterial = new THREE.ShaderMaterial({
-  uniforms: { tCube: { value: skyboxTexture } },
-  vertexShader: `
-    varying vec3 v_normal;
-    void main() {
-        v_normal = position;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  fragmentShader: `
-    uniform samplerCube tCube;
-    varying vec3 v_normal;
-    void main() {
-        gl_FragColor = textureCube(tCube, v_normal);
-    }
-  `,
-  side: THREE.BackSide, // Render the inside of the cube
-  depthWrite: false, // Prevents the skybox from being written to the depth buffer
+  uniforms: THREE.UniformsUtils.clone(THREE.ShaderLib.cube.uniforms),
+  vertexShader: THREE.ShaderLib.cube.vertexShader,
+  fragmentShader: THREE.ShaderLib.cube.fragmentShader,
+  side: THREE.BackSide,
+  depthWrite: false
 });
+skyboxMaterial.uniforms.tCube.value = skyboxTexture;
 
+// Large cube for skybox background
 const skyboxGeometry = new THREE.BoxGeometry(1000, 1000, 1000);
 const skyboxMesh = new THREE.Mesh(skyboxGeometry, skyboxMaterial);
-
-// 3. Create a separate scene for the skybox
-const skyboxScene = new THREE.Scene();
 skyboxScene.add(skyboxMesh);
 
-skyboxMesh.onBeforeRender = function(renderer, scene, camera) {
-  this.position.copy(camera.position);
+// Follow camera position to keep skybox around camera
+skyboxMesh.onBeforeRender = function (renderer, _scene, cam) {
+  this.position.copy(cam.position);
 };
 
-const ssrBufferMaterial = new THREE.ShaderMaterial({
-=======
-let ssrBufferMaterial;
-if (MODE == "scene"){
-ssrBufferMaterial = new THREE.ShaderMaterial({
->>>>>>> Stashed changes
-    vertexShader: ssrVertexShader,
-    fragmentShader: ssrFragmentShader,
-    glslVersion: THREE.GLSL3,
-    uniforms: {
-            gColor: { value: gColorTexture },
-            gNormal: { value: gNormalTexture },
-            gPosition: { value: gPositionTexture },
-            gReflection: { value: gReflectionTexture },
-            gDepth: { value: gBuffer.depthTexture },
-            resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-    
-            projectionMatrix: { value: camera.projectionMatrix },
-            inverseProjectionMatrix: { value: new THREE.Matrix4() },
-            inverseViewMatrix: { value: new THREE.Matrix4() },
-            cameraWorldPosition: { value: camera.position },
-    
-<<<<<<< Updated upstream
-            cameraNear: { value: ssrCamera.near },
-            cameraFar: { value: ssrCamera.far },
-        }
+/* ---------------- Mode selection UI ---------------- */
+const select = document.createElement('select');
+select.style.position = 'absolute';
+select.style.top = '10px';
+select.style.right = '10px';
+select.style.padding = '5px';
+select.innerHTML = `
+  <option value="scene">Scene</option>
+  <option value="SSR" selected>SSR</option>
+`;
+document.body.appendChild(select);
+
+// Update mode when selection changes
+select.addEventListener('change', () => {
+  mode = select.value;
+  ssrBufferMaterial.uniforms.mode.value = mode === 'scene' ? 0 : 1;
 });
-=======
-            cameraNear: { value: camera.near },
-            cameraFar: { value: camera.far },
 
-            mode: {value: 0},
-        }
+/* ---------------- SSR material ---------------- */
+let ssrBufferMaterial = new THREE.ShaderMaterial({
+  vertexShader: ssrVertexShader,
+  fragmentShader: ssrFragmentShader,
+  glslVersion: THREE.GLSL3,
+  uniforms: {
+    gColor: { value: gColorTexture },
+    gNormal: { value: gNormalTexture },
+    gPosition: { value: gPositionTexture },
+    gReflection: { value: gReflectionTexture },
+    gDepth: { value: gBuffer.depthTexture },
+    resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+    projectionMatrix: { value: ssrCamera.projectionMatrix },
+    inverseProjectionMatrix: { value: new THREE.Matrix4() },
+    inverseViewMatrix: { value: new THREE.Matrix4() },
+    cameraWorldPosition: { value: ssrCamera.position },
+    cameraNear: { value: ssrCamera.near },
+    cameraFar: { value: ssrCamera.far },
+    mode: { value: mode === 'scene' ? 0 : 1 },
+  },
+  transparent: true,
+  depthTest: false,
+  depthWrite: false,
+  blending: THREE.NormalBlending
 });
-}
-else if (MODE == "SSR"){
-ssrBufferMaterial = new THREE.ShaderMaterial({
-    vertexShader: ssrVertexShader,
-    fragmentShader: ssrFragmentShader,
-    glslVersion: THREE.GLSL3,
-    uniforms: {
-            gColor: { value: gColorTexture },
-            gNormal: { value: gNormalTexture },
-            gPosition: { value: gPositionTexture },
-            gReflection: { value: gReflectionTexture },
-            gDepth: { value: gBuffer.depthTexture },
-            resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-    
-            projectionMatrix: { value: camera.projectionMatrix },
-            inverseProjectionMatrix: { value: new THREE.Matrix4() },
-            inverseViewMatrix: { value: new THREE.Matrix4() },
-            cameraWorldPosition: { value: camera.position },
-    
-            cameraNear: { value: camera.near },
-            cameraFar: { value: camera.far },
 
-            mode: {value: 1},
-        }
-}); 
-}
->>>>>>> Stashed changes
+/* ---------------- Scene content & lights ---------------- */
+addObjects(scene);
 
-import {planeVertexShader} from './planeReflect/planeReflectVertexShader.js';
+const ambientLight = new THREE.AmbientLight(0x404040);
+scene.add(ambientLight);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+directionalLight.position.set(5, 10, 7);
+scene.add(directionalLight);
+
+/*import {planeVertexShader} from './planeReflect/planeReflectVertexShader.js';
 import {planeFragmentShader} from './planeReflect/planeReflectFragmentShader.js';
 
+let planeCamera = new THREE.PerspectiveCamera();
 let planeMaterial = new THREE.ShaderMaterial({
     vertexShader: planeVertexShader,
     fragmentShader: planeFragmentShader,
     glslVersion: THREE.GLSL3,
     uniforms: {
+      color: {value: [0.5, 0.5, 0.5]},
       tDiffuse: {value: gColorTexture},
       tDepth: {value: gBuffer.depthTexture},
-    }
+      tPosition: { value: gPositionTexture },
+      virtualCameraNear: {value: planeCamera.near},
+      virtualCameraFar: {value: planeCamera.far},
+      //virtualCameraProjectionMatrix: {value: camera.projectionMatrix},
+      //virtualCameraProjectionMatrixInverse: {value: new THREE.Matrix4()},
+      //virtualCameraMatrixWorld: {value: new THREE.Matrix4()},
+    },
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    blending: THREE.NormalBlending
 });
 
+const planescene = new THREE.Scene();
 const planeGeometry = new THREE.PlaneGeometry(200, 200); // Width, Height
 const plane = new THREE.Mesh(planeGeometry, planeMaterial);
 plane.rotateX(-Math.PI/2);
 scene.add(plane);
+//planescene.add(plane);*/
 
 
-addObjects(scene);
-addSkyBox(scene);
-
-
+/* ---------------- Fullscreen quad for SSR ---------------- */
 const postProcessQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ssrBufferMaterial);
 ssrScene.add(postProcessQuad);
 
-
-// --- The Render Loop ---
+/* ---------------- Render loop ---------------- */
 function animate() {
   requestAnimationFrame(animate);
+
   cameraControls.update();
-<<<<<<< Updated upstream
-  if (MODE == "scene"){
-    renderer.setRenderTarget(gBuffer);
-    renderer.render(scene, camera);
-    composer.render();
-  }
-  else if (MODE == "SSR"){
+
+  // Update matrices for SSR
   ssrBufferMaterial.uniforms.inverseProjectionMatrix.value.copy(ssrCamera.projectionMatrix).invert();
   ssrBufferMaterial.uniforms.inverseViewMatrix.value.copy(ssrCamera.matrixWorldInverse).invert();
   ssrBufferMaterial.uniforms.cameraWorldPosition.value.copy(ssrCamera.position);
-=======
-  ssrBufferMaterial.uniforms.inverseProjectionMatrix.value.copy(camera.projectionMatrix).invert();
-  ssrBufferMaterial.uniforms.inverseViewMatrix.value.copy(camera.matrixWorldInverse).invert();
-  ssrBufferMaterial.uniforms.cameraWorldPosition.value.copy(camera.position);
->>>>>>> Stashed changes
 
-  // 1. G-buffer Pass: Render normals and depth
+  //planeMaterial.uniforms.virtualCameraProjectionMatrixInverse.value.copy(camera.projectionMatrix).invert();
+  //planeMaterial.uniforms.inverseViewMatrix.value.copy(camera.matrixWorldInverse).invert();
+  //planeMaterial.uniforms.virtualCameraMatrixWorld.value.copy(camera.matrixWorld);
+
+  // 1) G-Buffer Pass (to RenderTarget)
   renderer.setRenderTarget(gBuffer);
-  renderer.clear();
+  renderer.clear(true, true, true);
   renderer.render(scene, camera);
 
-  // 2. SSR Pass: Render to screen using the buffers
+  // 2) Skybox + SSR Pass (to screen)
   renderer.setRenderTarget(null);
-  renderer.clear();
-<<<<<<< Updated upstream
-  renderer.render(skyboxScene, camera);
-  renderer.render(ssrScene, ssrCamera);
+  renderer.clear(true, true, true); // Clear color, depth, and stencil
   
-  }
-=======
-  renderer.render(scene, camera);
-  //renderer.render(skyboxScene, camera);
-  //renderer.render(ssrScene, camera);
->>>>>>> Stashed changes
+  renderer.render(skyboxScene, camera); // Render skybox first
+  renderer.render(scene, camera); // Render scene objects
+  
+  //renderer.render(planescene, camera);
+  renderer.render(ssrScene, ssrCamera); // Render SSR post-process quad
 }
 
 animate();
 
-// Handle window resizing
+/* ---------------- Resize ---------------- */
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+
+  // Update resolution in uniforms if needed
+  if (ssrBufferMaterial && ssrBufferMaterial.uniforms.resolution) {
+    ssrBufferMaterial.uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
+  }
 });
