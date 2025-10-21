@@ -20,6 +20,9 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+const fpsElem = document.getElementById('fps');
+let lastFrameTime = 0;
+
 // Set renderer color space
 if ('outputColorSpace' in renderer) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -96,6 +99,7 @@ select.innerHTML = `
   <option value="scene">Scene</option>
   <option value="SSR" selected>SSR</option>
 `;
+select.style.zIndex = 2;
 document.body.appendChild(select);
 
 // Update mode when selection changes
@@ -144,7 +148,8 @@ const postProcessQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ssrBufferM
 ssrScene.add(postProcessQuad);
 
 /* ---------------- Render loop ---------------- */
-function animate() {
+function animate(currentTime) {
+  
   requestAnimationFrame(animate);
 
   cameraControls.update();
@@ -165,9 +170,14 @@ function animate() {
   renderer.render(skyboxScene, camera); // Render skybox first
   renderer.render(scene, camera); // Render scene objects
   renderer.render(ssrScene, ssrCamera); // Render SSR post-process quad
+  currentTime *= 0.001;
+  const deltaTime = currentTime - lastFrameTime;
+  lastFrameTime = currentTime;
+  const fps = 1 / deltaTime;
+  fpsElem.textContent = `FPS: ${fps.toFixed(1)}`;
 }
 
-animate();
+requestAnimationFrame(animate);
 
 /* ---------------- Resize ---------------- */
 window.addEventListener('resize', () => {
