@@ -20,6 +20,9 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+const fpsElem = document.getElementById('fps');
+let lastFrameTime = 0;
+
 // Set renderer color space
 if ('outputColorSpace' in renderer) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -96,6 +99,7 @@ select.innerHTML = `
   <option value="scene">Scene</option>
   <option value="SSR" selected>SSR</option>
 `;
+select.style.zIndex = 2;
 document.body.appendChild(select);
 
 // Update mode when selection changes
@@ -139,45 +143,13 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
 directionalLight.position.set(5, 10, 7);
 scene.add(directionalLight);
 
-/*import {planeVertexShader} from './planeReflect/planeReflectVertexShader.js';
-import {planeFragmentShader} from './planeReflect/planeReflectFragmentShader.js';
-
-let planeCamera = new THREE.PerspectiveCamera();
-let planeMaterial = new THREE.ShaderMaterial({
-    vertexShader: planeVertexShader,
-    fragmentShader: planeFragmentShader,
-    glslVersion: THREE.GLSL3,
-    uniforms: {
-      color: {value: [0.5, 0.5, 0.5]},
-      tDiffuse: {value: gColorTexture},
-      tDepth: {value: gBuffer.depthTexture},
-      tPosition: { value: gPositionTexture },
-      virtualCameraNear: {value: planeCamera.near},
-      virtualCameraFar: {value: planeCamera.far},
-      //virtualCameraProjectionMatrix: {value: camera.projectionMatrix},
-      //virtualCameraProjectionMatrixInverse: {value: new THREE.Matrix4()},
-      //virtualCameraMatrixWorld: {value: new THREE.Matrix4()},
-    },
-    transparent: true,
-    depthTest: false,
-    depthWrite: false,
-    blending: THREE.NormalBlending
-});
-
-const planescene = new THREE.Scene();
-const planeGeometry = new THREE.PlaneGeometry(200, 200); // Width, Height
-const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-plane.rotateX(-Math.PI/2);
-scene.add(plane);
-//planescene.add(plane);*/
-
-
 /* ---------------- Fullscreen quad for SSR ---------------- */
 const postProcessQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ssrBufferMaterial);
 ssrScene.add(postProcessQuad);
 
 /* ---------------- Render loop ---------------- */
-function animate() {
+function animate(currentTime) {
+  
   requestAnimationFrame(animate);
 
   cameraControls.update();
@@ -187,10 +159,6 @@ function animate() {
   ssrBufferMaterial.uniforms.inverseViewMatrix.value.copy(ssrCamera.matrixWorldInverse).invert();
   ssrBufferMaterial.uniforms.cameraWorldPosition.value.copy(ssrCamera.position);
 
-  //planeMaterial.uniforms.virtualCameraProjectionMatrixInverse.value.copy(camera.projectionMatrix).invert();
-  //planeMaterial.uniforms.inverseViewMatrix.value.copy(camera.matrixWorldInverse).invert();
-  //planeMaterial.uniforms.virtualCameraMatrixWorld.value.copy(camera.matrixWorld);
-
   // 1) G-Buffer Pass (to RenderTarget)
   renderer.setRenderTarget(gBuffer);
   renderer.clear(true, true, true);
@@ -199,15 +167,17 @@ function animate() {
   // 2) Skybox + SSR Pass (to screen)
   renderer.setRenderTarget(null);
   renderer.clear(true, true, true); // Clear color, depth, and stencil
-  
   renderer.render(skyboxScene, camera); // Render skybox first
   renderer.render(scene, camera); // Render scene objects
-  
-  //renderer.render(planescene, camera);
   renderer.render(ssrScene, ssrCamera); // Render SSR post-process quad
+  currentTime *= 0.001;
+  const deltaTime = currentTime - lastFrameTime;
+  lastFrameTime = currentTime;
+  const fps = 1 / deltaTime;
+  fpsElem.textContent = `FPS: ${fps.toFixed(1)}`;
 }
 
-animate();
+requestAnimationFrame(animate);
 
 /* ---------------- Resize ---------------- */
 window.addEventListener('resize', () => {
