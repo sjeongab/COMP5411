@@ -1,12 +1,20 @@
 import * as THREE from 'three'
+import {gBufferMaterial} from '../gBuffer/gBuffer.js'
 
 function addPlane(scene, config) {
-    const planeGeometry = new THREE.PlaneGeometry(150, 150); // Width, Height
-    const planeMaterial = new THREE.MeshPhongMaterial({ color: 0x222222, side: THREE.DoubleSide, reflectivity: 1});
-    const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-    plane.rotateX(-Math.PI/2);
-    scene.add(plane); 
-    reflections.push(plane);
+    const planeGeometry = new THREE.PlaneGeometry(200, 200); // Width, Height
+      const planeGbufferMaterial = new THREE.ShaderMaterial({
+          uniforms: {
+              uColor: { value: config.color},
+              uReflectivity: {value: config.reflectivity},
+          },
+          vertexShader: gBufferMaterial.vertexShader,
+          fragmentShader: gBufferMaterial.fragmentShader,
+          glslVersion:THREE.GLSL3,
+      });
+      const plane = new THREE.Mesh(planeGeometry, planeGbufferMaterial);
+      plane.rotateX(-Math.PI/2);
+      scene.add(plane);
 }
 
-export{addCube};
+export{addPlane};

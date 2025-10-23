@@ -1,11 +1,12 @@
 // object/addObjects.js
 import { addCube } from './cube.js'
 import { addSphere } from './sphere.js'
+import { addPlane } from './addPlane.js'
 import * as THREE from 'three'
 import { gBufferMaterial } from '../gBuffer/gBuffer.js'  // G-buffer pass material
 
 const objects = [
-    {type: 'plane'},
+    {type: 'plane', color: new THREE.Color(0xaaaaaa), reflectivity: 1.0},
     { type: 'cube', position: [-40.0, 5, 15.0], scale: 10, rotationSpeed: 0, color: new THREE.Color(0XF0DD98), reflectivity: 1.0 },
     { type: 'sphere', position: [0, 20, 0], scale: 20, rotationSpeed: 0.8, color: new THREE.Color(0XE7C88D), reflectivity: 1.0 },
     { type: 'sphere', position: [-35.0, 8, -20.0], scale: 8, rotationSpeed: 1.2, color: new THREE.Color(0xE7577F7), reflectivity: 0.5},
@@ -21,21 +22,7 @@ const objects = [
 function addObjects(scene) {
   objects.forEach((object) => {
     if (object.type === 'plane') {
-      const planeGeometry = new THREE.PlaneGeometry(200, 200); // Width, Height
-      const planeGbufferMaterial = new THREE.ShaderMaterial({
-          uniforms: {
-              uColor: { value: new THREE.Color(0x888888) },
-              uReflectivity: {value: 1.0},
-          },
-          // Same vertex and fragment shader as before
-          vertexShader: gBufferMaterial.vertexShader,
-          fragmentShader: gBufferMaterial.fragmentShader,
-          glslVersion:THREE.GLSL3,
-      });
-      const plane = new THREE.Mesh(planeGeometry, planeGbufferMaterial);
-      plane.rotateX(-Math.PI/2);
-      scene.add(plane); 
-      let x= 1;
+      addPlane(scene, object); 
     } else if (object.type == 'sphere'){
       addSphere(scene, object);
     }
