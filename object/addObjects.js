@@ -19,7 +19,34 @@ const objects = [
     { type: 'sphere', position: [0, 100, 100], scale: 0.5, rotationSpeed: 0, color: new THREE.Color(0xFFFFFF), reflectivity: 0.5 }, //light source
 ];
 
-function addObjects(scene) {
+
+function addPlainObjects(scene) {
+  objects.forEach((object) => {
+    if (object.type === 'plane') {
+      const planeGeometry = new THREE.PlaneGeometry(200, 200);
+      const planeMaterial = new THREE.MeshPhongMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide });
+      const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+      plane.rotation.x = -Math.PI / 2; // Rotate the plane to be horizontal
+      scene.add(plane);
+    } else if (object.type == 'sphere'){
+      const sphereGeometry = new THREE.SphereGeometry(object.scale, 32, 32);
+      const sphereMaterial = new THREE.MeshPhongMaterial({ color: object.color, shininess: object.reflectivity });
+      const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+      sphere.position.set(...object.position); // Position the sphere above the plane
+      scene.add(sphere);
+    }
+    else{
+      const cubeGeometry = new THREE.BoxGeometry(object.scale, object.scale, object.scale);
+      const cubeMaterial = new THREE.MeshPhongMaterial({ color: object.color, shininess: object.reflectivity });
+      const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+      cube.position.set(...object.position); // Position the cube above the plane
+      scene.add(cube);
+    }
+  });
+}
+
+
+function addSSRObjects(scene) {
   objects.forEach((object) => {
     if (object.type === 'plane') {
       addPlane(scene, object); 
@@ -53,4 +80,4 @@ function addLightMarker(scene, position = [10, 20, 10], radius = 3.0) {
   return marker;
 }
 
-export { addObjects, addLightMarker }
+export { addPlainObjects, addSSRObjects, addLightMarker }

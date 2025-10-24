@@ -21,7 +21,6 @@ gBuffer.textures[1].name = 'gNormal';
 gBuffer.textures[2].name = 'gPosition';
 gBuffer.textures[3].name = 'gReflection';
 
-const [gColorTexture, gNormalTexture, gPositionTexture, gReflectionTexture] = gBuffer.textures;
 
 const gBufferMaterial = new THREE.ShaderMaterial({
     vertexShader: gBufferVertexShader,
@@ -33,4 +32,4 @@ const gBufferMaterial = new THREE.ShaderMaterial({
     },
 });
 
-export {gBuffer, gBufferMaterial, gColorTexture, gNormalTexture, gPositionTexture, gReflectionTexture};
+export {gBuffer, gBufferMaterial};

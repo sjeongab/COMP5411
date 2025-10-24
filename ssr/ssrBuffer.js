@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import {ssrVertexShader} from './ssrVertexShader.js';
 import {ssrFragmentShader} from './ssrFragmentShader.js';
-import {gBuffer, gColorTexture, gNormalTexture, gPositionTexture, gReflectionTexture} from '../gBuffer/gBuffer.js';
+import {gBuffer} from '../gBuffer/gBuffer.js';
 
 /* ---------------- SSR material ---------------- */
 function loadSSRMaterial(ssrCamera, mode) {
@@ -10,10 +10,10 @@ function loadSSRMaterial(ssrCamera, mode) {
     fragmentShader: ssrFragmentShader,
     glslVersion: THREE.GLSL3,
     uniforms: {
-        gColor: { value: gColorTexture },
-        gNormal: { value: gNormalTexture },
-        gPosition: { value: gPositionTexture },
-        gReflection: { value: gReflectionTexture },
+        gColor: { value: gBuffer.textures[0] },
+        gNormal: { value: gBuffer.textures[1] },
+        gPosition: { value: gBuffer.textures[2] },
+        gReflection: { value: gBuffer.textures[3] },
         gDepth: { value: gBuffer.depthTexture },
         resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
         projectionMatrix: { value: ssrCamera.projectionMatrix },

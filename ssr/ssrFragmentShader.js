@@ -9,7 +9,6 @@ const ssrFragmentShader = `
         uniform sampler2D gReflection;
         uniform sampler2D gDepth;
         uniform vec2 resolution;
-        uniform samplerCube gBackground;
 
         uniform mat4 projectionMatrix;
         uniform mat4 inverseProjectionMatrix;
@@ -25,14 +24,9 @@ const ssrFragmentShader = `
         
 
         float pointToLineDistance(vec3 x0, vec3 x1, vec3 x2) {
-			//x0: point, x1: linePointA, x2: linePointB
-			//https://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
 			return length(cross(x0-x1,x0-x2))/length(x2-x1);
 		}
 		float pointPlaneDistance(vec3 point,vec3 planePoint,vec3 planeNormal){
-			// https://mathworld.wolfram.com/Point-PlaneDistance.html
-			//// https://en.wikipedia.org/wiki/Plane_(geometry)
-			//// http://paulbourke.net/geometry/pointlineplane/
 			float a=planeNormal.x,b=planeNormal.y,c=planeNormal.z;
 			float x0=point.x,y0=point.y,z0=point.z;
 			float x=planePoint.x,y=planePoint.y,z=planePoint.z;
