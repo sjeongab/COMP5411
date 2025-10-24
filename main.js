@@ -8,12 +8,7 @@ import {loadSSRMaterial} from './ssr/ssrBuffer.js'
 let mode = "Plain"; // Default mode
 
 const scene = new THREE.Scene();
-//const ssrScene = new THREE.Scene();
-//const skyboxScene = new THREE.Scene();
-
-
-
-//const ssrCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+let ssrScene, ssrCamera, ssrMaterial, postProcessQuad;
 
 // Assumes canvas variable exists in HTML
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -34,7 +29,9 @@ renderer.autoClear = false;
 const modeSelect = document.getElementById("modeSelect");
 modeSelect.addEventListener("change", (event) => {
     mode = event.target.value;
-    ssrMaterial.uniforms.mode.value = mode === 'scene' ? 0 : 1;
+    console.log(mode);
+    callfunction(mode);
+    //ssrMaterial.uniforms.mode.value = mode === 'scene' ? 0 : 1;
 });
 
 // Camera
@@ -55,8 +52,62 @@ let lastFrameTime = 0;
 addSkyBox(renderer, scene);
 
 /* ---------------- Scene content & lights ---------------- */
-addPlainObjects(scene);
-//addSSRObjects(scene);
+
+function callfunction(mode){
+switch(mode) {
+    case "SSR":
+      
+      addSSRObjects(scene);
+      postProcessQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ssrMaterial);
+      
+      ssrScene = new THREE.Scene();
+      ssrScene.add(postProcessQuad);
+
+      ssrCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      ssrMaterial = loadSSRMaterial(ssrCamera, mode);
+
+      function animate(currentTime) {
+  
+      requestAnimationFrame(animate);
+
+      ssrMaterial.uniforms.inverseProjectionMatrix.value.copy(ssrCamera.projectionMatrix).invert();
+      ssrMaterial.uniforms.inverseViewMatrix.value.copy(ssrCamera.matrixWorldInverse).invert();
+      ssrMaterial.uniforms.cameraWorldPosition.value.copy(ssrCamera.position);
+      ssrMaterial.uniforms.mode.value = mode === 'Plain' ? 0 : 1;
+
+      // 1) G-Buffer Pass (to RenderTarget)
+      renderer.setRenderTarget(gBuffer);
+      renderer.clear(true, true, true);
+      renderer.render(scene, camera);
+
+      // 2) Skybox + SSR Pass (to screen)
+      renderer.setRenderTarget(null);
+      renderer.clear(true, true, true); // Clear color, depth, and stencil
+      renderer.render(skyboxScene, camera); // Render skybox first
+      renderer.render(scene, camera); // Render skybox + scene objects
+      renderer.render(ssrScene, ssrCamera);
+      }
+      requestAnimationFrame(animate);
+      
+      break;
+
+    case "Hybrid":
+      // code block
+      break;
+
+    default: //plain
+      //TODO: add skybox
+      addPlainObjects(scene);
+      function animate(currentTime) {
+      renderer.clear(true, true, true);
+      renderer.render(scene, camera);
+      }
+      requestAnimationFrame(animate);
+
+}
+};
+
+
 
 const ambientLight = new THREE.AmbientLight(0x404040);
 scene.add(ambientLight);
@@ -69,7 +120,7 @@ scene.add(directionalLight);
 //ssrScene.add(postProcessQuad);
 
 /* ---------------- Render loop ---------------- */
-function animate(currentTime) {
+/*function animate(currentTime) {
   
   requestAnimationFrame(animate);
 
@@ -105,6 +156,7 @@ function animate(currentTime) {
       renderer.clear(true, true, true);
       renderer.render(scene, camera);
   }
+  requestAnimationFrame(animate);
   
   currentTime *= 0.001;
   const deltaTime = currentTime - lastFrameTime;
@@ -113,7 +165,7 @@ function animate(currentTime) {
   fpsElem.textContent = `FPS: ${fps.toFixed(1)}`;
 }
 
-requestAnimationFrame(animate);
+requestAnimationFrame(animate);*/
 
 /* ---------------- Resize ---------------- */
 window.addEventListener('resize', () => {
@@ -122,7 +174,7 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 
   // Update resolution in uniforms if needed
-  if (ssrMaterial && ssrMaterial.uniforms.resolution) {
-    ssrMaterial.uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
-  }
+ // if (ssrMaterial && ssrMaterial.uniforms.resolution) {
+ //   ssrMaterial.uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
+  //}
 });

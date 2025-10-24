@@ -15,14 +15,50 @@
 </head>
 
 <body>
-    
-    <canvas id="canvas"></canvas>
-    <script type="module" src="./main.js"></script>
     <div id="fps"></div>
-    <select id="modeSelect">
-            <option value="Plain">Plain</option>
-            <option value="SSR">SSR</option>
-            <option value="Hybrid">Hybrid</option> 
+    <div id="controls">
+        <select id="modeSelect">
+            <option value="plain.js">Plain</option>
+            <option value="ssr.js">SSR</option>
+            <option value="hybrid.js">Hybrid</option>
         </select>
+    </div>
+    <canvas id="canvas"></canvas>
+    
+    <script type="module">
+        const modeSelect = document.getElementById("modeSelect");
+        const canvas = document.getElementById("canvas");
+
+        // Function to load a JavaScript file dynamically
+        async function loadScript(script) {
+            const existingScript = document.getElementById('dynamic-script');
+            if (existingScript) {
+                existingScript.parentNode.removeChild(existingScript); // Remove existing script
+            }
+            const newScript = document.createElement('script');
+            newScript.type = 'module';
+            newScript.src = script;
+            newScript.id = 'dynamic-script';
+            newScript.onload = function() {
+                // Call the init function from the loaded script
+                if (script === "plain.js") {
+                    draw(canvas);
+                } else if (script === "ssr.js") {
+                    draw(canvas);
+                } else if (script === "anotherMode.js") {
+                    draw(canvas);
+                }
+            };
+            document.body.appendChild(newScript);
+        }
+
+        // Load the default script
+        loadScript(modeSelect.value);
+
+        // Change event listener for the dropdown
+        modeSelect.addEventListener("change", (event) => {
+            loadScript(event.target.value); // Load the selected script
+        });
+    </script>
 </body>
 </html>
