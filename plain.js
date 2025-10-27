@@ -1,8 +1,7 @@
 import * as THREE from 'three'
-/*import {addPlainObjects} from './object/addObjects.js'
-import * as THREE from 'three'
+import {addPlainObjects} from './object/addObjects.js'
 import { OrbitControls } from 'OrbitControls'
-import {gBuffer} from './gBuffer/gBuffer.js'
+/*import {gBuffer} from './gBuffer/gBuffer.js'
 import { addSkyBox } from './object/addSkyBox.js'
 import {loadSSRMaterial} from './ssr/ssrBuffer.js'
 
@@ -70,26 +69,28 @@ requestAnimationFrame(animate);*/
 let lastFrameTime, fpsElem;
 let camera, cameraControls;
 
-function draw(canvas) {
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-  //* ---------------- Set up camera ---------------- */
-  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
-  camera.position.set(0, 75, 160);
-  cameraControls = new OrbitControls(camera, renderer.domElement);
-  cameraControls.target.set(0, 0, 0);
-  cameraControls.maxDistance = 400;
-  cameraControls.minDistance = 10;
-  cameraControls.update();
 
-  /* ---------------- Display FPS ---------------- */
-  lastFrameTime = 0;
-  fpsElem = document.getElementById('fps');
+//* ---------------- Set up camera ---------------- */
+camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
+camera.position.set(0, 75, 160);
+cameraControls = new OrbitControls(camera, renderer.domElement);
+cameraControls.target.set(0, 0, 0);
+cameraControls.maxDistance = 400;
+cameraControls.minDistance = 10;
+cameraControls.update();
 
-  animate();
+/* ---------------- Display FPS ---------------- */
+lastFrameTime = 0;
+fpsElem = document.getElementById('fps');
 
-}
+animate();
 
 function animate(currentTime){
+  console.log("drawing plain");
   requestAnimationFrame(animate);
 
   cameraControls.update();
@@ -104,4 +105,5 @@ function animate(currentTime){
   const fps = 1 / deltaTime;
   fpsElem.textContent = `FPS: ${fps.toFixed(1)}`;
 
-}
+};
+//export {drawPlain};
