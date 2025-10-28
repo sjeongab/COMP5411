@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'OrbitControls'
 import {updateFPS} from './fps.js';
 import {addPlainObjects} from './object/addObjects.js'
+import { addSkyBox } from './object/addSkyBox.js'
 
 let scene, camera, renderer, cube;
 let isRunning = true;
@@ -35,6 +36,7 @@ export function init(canvas) {
 
     // 4. Create a cube
     addPlainObjects(scene);
+    addSkyBox(renderer, scene);
     const ambientLight = new THREE.AmbientLight(0x404040);
     scene.add(ambientLight);
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
