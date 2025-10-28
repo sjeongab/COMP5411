@@ -33,6 +33,7 @@ function addPlainObjects(scene) {
       const sphereMaterial = new THREE.MeshPhongMaterial({ color: object.color, shininess: object.reflectivity });
       const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       sphere.position.set(...object.position); // Position the sphere above the plane
+      console.log(object.color);
       scene.add(sphere);
     }
     else{

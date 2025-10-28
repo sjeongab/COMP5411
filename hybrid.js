@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 
+import {updateFPS} from './fps.js';
+
 let scene, camera, renderer, cube;
 let isRunning = true;
 
@@ -25,21 +27,21 @@ export function init(container) {
 
     isRunning = true;
     // 5. Start the animation loop
-    function animate()  {
+    function animate(currentTime)  {
       if(!isRunning) return;
-      
+      updateFPS(currentTime);
       console.log("Running Hybrid.js");
-        // Rotate the cube
-        cube.rotation.x += 0.01;
-        cube.rotation.y += 0.01;
+      // Rotate the cube
+      cube.rotation.x += 0.01;
+      cube.rotation.y += 0.01;
 
-        // Render the scene
-        renderer.setRenderTarget(null);
-        renderer.clear(true, true, true);
-        renderer.render(scene, camera);
+      // Render the scene
+      renderer.setRenderTarget(null);
+      renderer.clear(true, true, true);
+      renderer.render(scene, camera);
 
-        // Request the next animation frame
-        requestAnimationFrame(animate);
+      // Request the next animation frame
+      requestAnimationFrame(animate);
     };
 
     requestAnimationFrame(animate); // Return the animation frame ID
