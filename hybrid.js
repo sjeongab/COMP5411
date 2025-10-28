@@ -1,45 +1,64 @@
-import * as THREE from 'three'
-import {addPlainObjects} from './object/addObjects.js'
-import { OrbitControls } from 'OrbitControls'
+import * as THREE from 'three';
 
-let lastFrameTime, fpsElem;
-let camera, cameraControls;
+let scene, camera, renderer, cube;
+let isRunning = true;
 
+// Function to initialize the Three.js scene
+export function init(container) {
+  isRunning = true;
+    // 1. Set up the scene
+    scene = new THREE.Scene();
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+    // 2. Set up the camera
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 5;
 
+    // 3. Set up the renderer
+    renderer = new THREE.WebGLRenderer({ container, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-//* ---------------- Set up camera ---------------- */
-camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
-camera.position.set(0, 75, 160);
-cameraControls = new OrbitControls(camera, renderer.domElement);
-cameraControls.target.set(0, 0, 0);
-cameraControls.maxDistance = 400;
-cameraControls.minDistance = 10;
-cameraControls.update();
+    // 4. Create a cube
+    const geometry = new THREE.BoxGeometry();
+    const material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+    cube = new THREE.Mesh(geometry, material);
+    scene.add(cube);
 
-/* ---------------- Display FPS ---------------- */
-lastFrameTime = 0;
-fpsElem = document.getElementById('fps');
+    // 5. Start the animation loop
+    function animate()  {
+      if(!isRunning) return;
+      
+      console.log("Running Hybrid.js");
+        // Rotate the cube
+        cube.rotation.x += 0.01;
+        cube.rotation.y += 0.01;
 
-animate();
+        // Render the scene
+        renderer.setRenderTarget(null);
+        renderer.clear(true, true, true);
+        renderer.render(scene, camera);
 
-function animate(currentTime){
-  console.log("drawing hybrid");
-  requestAnimationFrame(animate);
+        // Request the next animation frame
+        requestAnimationFrame(animate);
+    };
 
-  cameraControls.update();
+    requestAnimationFrame(animate); // Return the animation frame ID
+}
 
-  //renderer.clear(true, true, true);
-  //renderer.render(scene, camera);
-  
-  /* ---------------- Display FPS ---------------- */
-  currentTime *= 0.001;
-  const deltaTime = currentTime - lastFrameTime;
-  lastFrameTime = currentTime;
-  const fps = 1 / deltaTime;
-  fpsElem.textContent = `FPS: ${fps.toFixed(1)}`;
-
-};
+// Function to clean up resources when switching scenes
+export function stop(container) {
+    console.log(document.body.lastElementChild);
+    document.body.removeChild(document.body.lastElementChild);
+    if (renderer) {
+      console.log(renderer);
+        // Dispose of the WebGL renderer
+        renderer.dispose();
+    }
+    // Remove the canvas from the DOM
+    if (container) {
+        while (container.lastChild) {
+            document.body.removeChild(container.lastChild);
+        }
+    }
+    isRunning = false;
+}

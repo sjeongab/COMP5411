@@ -45,7 +45,7 @@ p {
   font-size: 16px;
     z-index: 2;
 }
-#modeSelect {
+#script-selector {
   position: absolute;
   top: 10px;
   right: 10px;

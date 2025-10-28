@@ -15,40 +15,20 @@
 </head>
 
 <body>
-    <div id="fps"></div>
+   <div id="fps">FPS: 0</div>
     <div id="controls">
-    <select id="script-selector" onchange="loadScript(this.value)">
-        <option value="plain.js">-- Select a script --</option>
-        <option value="hybrid.js">Script 1</option>
-        <option value="ssr.js">Script 2</option>
-    </select>
+        <select id="script-selector" onchange="loadScript(this.value)">
+            <option value="plain.js">Plain</option>
+            <option value="ssr.js">SSR</option>
+            <option value="hybrid.js">Hybrid</option>
+            
+        </select>
     </div>
     
     <canvas id="canvas"></canvas>
-    <script type="module">
-        function loadScript(scriptName) {
-            console.log('loadscript');
-            // Remove any existing dynamic script
-            const oldScript = document.getElementById('dynamic-script');
-            if (oldScript) {
-                oldScript.remove();
-            }
-            
-            // If no script is selected, clear the output and exit
-            if (!scriptName) {
-                console.log("Invalid script name");
-                return;
-            }
+    <script type="module" src="./select.js"></script>
 
-            // Create a new script element
-            const newScript = document.createElement('script');
-            newScript.id = 'dynamic-script'; // Give it an ID for easy removal
-            newScript.src = scriptName;
-            
-            // Append the new script to the body
-            document.body.appendChild(newScript);
-        }
-    </script>
-    <div id="fps"></div>
+    <!-- Load plain.js initially -->
+
 </body>
 </html>

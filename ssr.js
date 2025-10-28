@@ -4,6 +4,7 @@ import { OrbitControls } from 'OrbitControls'
 
 let lastFrameTime, fpsElem;
 let camera, cameraControls;
+let isAnimating;
 
 function drawSSR(){
 
