@@ -5,7 +5,6 @@ let isRunning = true;
 
 // Function to initialize the Three.js scene
 export function init(container) {
-  isRunning = true;
     // 1. Set up the scene
     scene = new THREE.Scene();
 
@@ -24,6 +23,7 @@ export function init(container) {
     cube = new THREE.Mesh(geometry, material);
     scene.add(cube);
 
+    isRunning = true;
     // 5. Start the animation loop
     function animate()  {
       if(!isRunning) return;
@@ -46,19 +46,8 @@ export function init(container) {
 }
 
 // Function to clean up resources when switching scenes
-export function stop(container) {
-    console.log(document.body.lastElementChild);
+export function stop() {
     document.body.removeChild(document.body.lastElementChild);
-    if (renderer) {
-      console.log(renderer);
-        // Dispose of the WebGL renderer
-        renderer.dispose();
-    }
-    // Remove the canvas from the DOM
-    if (container) {
-        while (container.lastChild) {
-            document.body.removeChild(container.lastChild);
-        }
-    }
+    renderer.dispose();
     isRunning = false;
 }

@@ -17,7 +17,7 @@
 <body>
    <div id="fps">FPS: 0</div>
     <div id="controls">
-        <select id="script-selector" onchange="loadScript(this.value)">
+        <select id="script-selector">
             <option value="plain.js">Plain</option>
             <option value="ssr.js">SSR</option>
             <option value="hybrid.js">Hybrid</option>
@@ -27,8 +27,6 @@
     
     <canvas id="canvas"></canvas>
     <script type="module" src="./select.js"></script>
-
-    <!-- Load plain.js initially -->
 
 </body>
 </html>

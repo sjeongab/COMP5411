@@ -8,10 +8,7 @@ let currentModule = null;
 // Function to clear the previous Three.js scene and stop its animation
 function clearPreviousScene() {
   if (currentModule && currentModule.stop) {
-    currentModule.stop(container);
-  }
-  while (container.firstChild) {
-    container.removeChild(container.firstChild);
+    currentModule.stop();
   }
 }
 
