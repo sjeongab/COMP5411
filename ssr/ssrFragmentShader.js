@@ -174,35 +174,7 @@ const ssrFragmentShader = `
                 objectColor = albedo; 
                 }
             }
-
-
-            //**********add phong shading
-            vec3 lightPos = vec3(0, 100, 100);
-            vec3 lightColor = vec3(1.0, 1.0, 1.0);
-            float shininess = 0.5;
-            // Calculate the light direction (from the fragment to the light)
-            vec3 lightDir = normalize(lightPos - position);
-            
-            // Calculate the view direction (from the fragment to the camera)
-            vec3 viewDir = normalize(viewPosition - position);
-            
-            // Calculate the reflection direction
-            vec3 reflectDir = reflect(-lightDir, normal);
-            
-            // Ambient component
-            vec3 ambient = 0.4 * lightColor; // Adjust ambient factor as needed
-
-            // Diffuse component (Lambertian reflection)
-            float diff = max(dot(normal, lightDir), 0.0);
-            vec3 diffuse = diff * lightColor;
-
-            // Specular component
-            float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-            vec3 specular = spec * lightColor;
-
-            // Combine all components
-            vec3 result = (ambient + diffuse + specular) * objectColor;
-            FragColor = vec4(result, alpha);
+            FragColor = vec4(objectColor, alpha);
             return;
         }
     `;
