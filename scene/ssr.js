@@ -6,30 +6,31 @@ import { addSkyBox } from '../object/addSkyBox.js'
 import {loadSSRMaterial} from '../ssr/ssrBuffer.js'
 import {gBuffer} from '../gBuffer/gBuffer.js'
 
-let scene, camera, renderer, cube;
+let scene, camera, renderer;
 let isRunning = true;
 
 // Function to initialize the Three.js scene
 export function init(canvas) {
   isRunning = true;
-    // 1. Set up the scene
+    // Set up the scene
     scene = new THREE.Scene();
+    const ssrScene = new THREE.Scene();
 
-    // 3. Set up the renderer
+    // Set up the renderer
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    //renderer.autoClear = false;
+    renderer.autoClear = false;
     document.body.appendChild(renderer.domElement);
     if ('outputColorSpace' in renderer) {
       renderer.outputColorSpace = THREE.SRGBColorSpace;
     } else if ('outputEncoding' in renderer) {
       renderer.outputEncoding = THREE.sRGBEncoding;
     }
-    renderer.autoClear = false;
 
-    // 2. Set up the camera
-    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
+    // Set up the camera
+    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
     camera.position.set(0, 75, 160);
+    const ssrCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
     let cameraControls = new OrbitControls(camera, renderer.domElement);
     cameraControls.target.set(0, 0, 0);
@@ -37,7 +38,7 @@ export function init(canvas) {
     cameraControls.minDistance = 10;
     cameraControls.update();
 
-    // 4. Create a cube
+    // Add objects
     addSSRObjects(scene);
     addSkyBox(renderer, scene);
     const ambientLight = new THREE.AmbientLight(0x404040);
@@ -45,14 +46,14 @@ export function init(canvas) {
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
     directionalLight.position.set(5, 10, 7);
     scene.add(directionalLight);
-
-    const ssrCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    
     const ssrMaterial = loadSSRMaterial(ssrCamera);
     const postProcessQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ssrMaterial);   
-    const ssrScene = new THREE.Scene();
     ssrScene.add(postProcessQuad);
 
-    // 5. Start the animation loop
+    // Add Planar Reflection here (add buffer, shaders too)
+
+    // Start the animation loop
     function animate(currentTime)  {
       if(!isRunning) return;
       updateFPS(currentTime);
@@ -69,7 +70,6 @@ export function init(canvas) {
       // Render the scene
       renderer.setRenderTarget(null);
       renderer.clear(true, true, true);
-      //renderer.render(skyboxScene, camera);
       renderer.render(scene, camera);
       renderer.render(ssrScene, ssrCamera);
 

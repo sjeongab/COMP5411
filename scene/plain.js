@@ -4,27 +4,22 @@ import {updateFPS} from '../fps.js';
 import {addPlainObjects} from '../object/addObjects.js'
 import { addSkyBox } from '../object/addSkyBox.js'
 
-let scene, camera, renderer, cube;
+let scene, renderer;
 let isRunning = true;
 
 // Function to initialize the Three.js scene
 export function init(canvas) {
   isRunning = true;
-    // 1. Set up the scene
+    // Set up the scene
     scene = new THREE.Scene();
 
-    // 3. Set up the renderer
+    // Set up the renderer
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    //renderer.autoClear = false;
     document.body.appendChild(renderer.domElement);
-    /*if ('outputColorSpace' in renderer) {
-      renderer.outputColorSpace = THREE.SRGBColorSpace;
-    } else if ('outputEncoding' in renderer) {
-      renderer.outputEncoding = THREE.sRGBEncoding;
-    }*/
 
-    // 2. Set up the camera
+
+    // Set up the camera
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
     camera.position.set(0, 75, 160);
 
@@ -34,7 +29,7 @@ export function init(canvas) {
     cameraControls.minDistance = 10;
     cameraControls.update();
 
-    // 4. Create a cube
+    // Create a cube
     addPlainObjects(scene);
     addSkyBox(renderer, scene);
     const ambientLight = new THREE.AmbientLight(0x404040);
@@ -43,15 +38,13 @@ export function init(canvas) {
     directionalLight.position.set(5, 10, 7);
     scene.add(directionalLight);
 
-    // 5. Start the animation loop
+    // Start the animation loop
     function animate(currentTime)  {
       if(!isRunning) return;
       updateFPS(currentTime);
       cameraControls.update();
 
       // Render the scene
-      //renderer.setRenderTarget(null);
-      //renderer.clear(true, true, true);
       renderer.render(scene, camera);
 
       // Request the next animation frame
@@ -60,6 +53,7 @@ export function init(canvas) {
 
     requestAnimationFrame(animate); // Return the animation frame ID
 }
+
 
 // Function to clean up resources when switching scenes
 export function stop() {

@@ -14,7 +14,7 @@ const gBufferFragmentShader = `
     layout(location = 3) out float gReflection;
 
     void main() {
-        gColor = vec4(uColor, 1.0);
+        gColor = vec4(uColor, 1.0); //TODO: add phong shading to the gColor
         gNormal = vec4(normalize(vNormal), 1.0);
         gPosition = vec4(vWorldPosition, 1.0);
         gReflection = uReflectivity;

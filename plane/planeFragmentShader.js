@@ -1,0 +1,5 @@
+const planeFragmentShader = `
+`
+;
+
+export {planeFragmentShader};
