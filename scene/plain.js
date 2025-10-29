@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'OrbitControls'
-import {updateFPS} from './fps.js';
-import {addPlainObjects} from './object/addObjects.js'
-import { addSkyBox } from './object/addSkyBox.js'
+import {updateFPS} from '../fps.js';
+import {addPlainObjects} from '../object/addObjects.js'
+import { addSkyBox } from '../object/addSkyBox.js'
 
 let scene, camera, renderer, cube;
 let isRunning = true;

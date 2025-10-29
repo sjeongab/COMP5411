@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'OrbitControls'
-import {updateFPS} from './fps.js';
-import {addSSRObjects} from './object/addObjects.js'
-import { addSkyBox } from './object/addSkyBox.js'
-import {loadSSRMaterial} from './ssr/ssrBuffer.js'
-import {gBuffer} from './gBuffer/gBuffer.js'
+import {updateFPS} from '../fps.js';
+import {addSSRObjects} from '../object/addObjects.js'
+import { addSkyBox } from '../object/addSkyBox.js'
+import {loadSSRMaterial} from '../ssr/ssrBuffer.js'
+import {gBuffer} from '../gBuffer/gBuffer.js'
 
 let scene, camera, renderer, cube;
 let isRunning = true;

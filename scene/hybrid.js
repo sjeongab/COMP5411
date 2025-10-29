@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-import {updateFPS} from './fps.js';
+import {updateFPS} from '../fps.js';
 
 let scene, camera, renderer, cube;
 let isRunning = true;
