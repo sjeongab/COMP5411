@@ -16,7 +16,6 @@ const ssrFragmentShader = `
         uniform vec3 cameraWorldPosition;
         uniform float cameraNear;
         uniform float cameraFar;
-        uniform int mode;
         
 
         out vec4 FragColor;
@@ -87,11 +86,6 @@ const ssrFragmentShader = `
 
             if (depth >= 0.9999) {
                 FragColor = vec4(0.0, 0.0, 0.0, 0.0);
-                return;
-            }
-
-            if(mode==0) {
-                FragColor = vec4(texture(gColor, uv).rgb, 1.0);
                 return;
             }
 

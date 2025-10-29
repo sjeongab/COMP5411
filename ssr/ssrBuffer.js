@@ -4,7 +4,7 @@ import {ssrFragmentShader} from './ssrFragmentShader.js';
 import {gBuffer} from '../gBuffer/gBuffer.js';
 
 /* ---------------- SSR material ---------------- */
-function loadSSRMaterial(ssrCamera, mode) {
+function loadSSRMaterial(ssrCamera) {
     const ssrMaterial = new THREE.ShaderMaterial({
     vertexShader: ssrVertexShader,
     fragmentShader: ssrFragmentShader,
@@ -22,7 +22,6 @@ function loadSSRMaterial(ssrCamera, mode) {
         cameraWorldPosition: { value: ssrCamera.position },
         cameraNear: { value: ssrCamera.near },
         cameraFar: { value: ssrCamera.far },
-        mode: { value: mode === 'scene' ? 0 : 1 },
     },
     transparent: true,
     depthTest: false,

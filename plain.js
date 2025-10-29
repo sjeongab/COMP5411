@@ -48,10 +48,6 @@ export function init(canvas) {
       if(!isRunning) return;
       updateFPS(currentTime);
       cameraControls.update();
-      //console.log("Running plain.js");
-      // Rotate the cube
-      //cube.rotation.x += 0.01;
-      //cube.rotation.y += 0.01;
 
       // Render the scene
       //renderer.setRenderTarget(null);
