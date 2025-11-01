@@ -33,6 +33,37 @@ export function init(canvas) {
     camera.position.set(0, 75, 160);
     const ssrCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
+    const reflectedViewMatrix = new THREE.Matrix4();
+    let reflectedCamera;
+    function updateReflectedViewMatrix() {
+    // Create a virtual reflected camera (clone the original to match properties)
+    reflectedCamera = camera.clone();
+    
+    // Reflect the camera position over the plane (y=0)
+    reflectedCamera.position.copy(camera.position);
+    reflectedCamera.position.y = -camera.position.y; // Reflect over y=0
+    
+    // Reflect the target (if it's not on the plane; here (0,0,0) is on the plane, so it stays the same)
+    //const reflectedTarget = cameraControls.target.clone();
+    //reflectedTarget.y = -reflectedTarget.y; // But since y=0, it remains (0,0,0)
+    
+    // For correct mirror orientation, reflect the up vector (invert y-component)
+    reflectedCamera.up.copy(camera.up);
+    reflectedCamera.up.y = -reflectedCamera.up.y; // Typically from (0,1,0) to (0,-1,0)
+    
+    // Make the reflected camera look at the reflected target
+    //reflectedCamera.lookAt(reflectedTarget);
+    
+    // Get the reflected view matrix (inverse of the world matrix)
+    reflectedCamera.updateMatrixWorld(); // Ensure matrices are updated
+    reflectedViewMatrix.copy(reflectedCamera.matrixWorldInverse);
+    }
+
+    updateReflectedViewMatrix();
+
+    const reflectionMatrix = new THREE.Matrix4();
+    reflectionMatrix.multiplyMatrices(camera.projectionMatrix, reflectedViewMatrix);
+
     let cameraControls = new OrbitControls(camera, renderer.domElement);
     cameraControls.target.set(0, 0, 0);
     cameraControls.maxDistance = 400;
@@ -62,6 +93,7 @@ export function init(canvas) {
         projectionMatrix: { value: ssrCamera.projectionMatrix },
         inverseProjectionMatrix: { value: new THREE.Matrix4() },
         inverseViewMatrix: { value: new THREE.Matrix4() },
+        reflectionMatrix: {value: reflectionMatrix},
         cameraWorldPosition: { value: ssrCamera.position },
         cameraNear: { value: ssrCamera.near },
         cameraFar: { value: ssrCamera.far },
@@ -82,9 +114,13 @@ export function init(canvas) {
       updateFPS(currentTime);
       cameraControls.update();
 
+      updateReflectedViewMatrix();
+      reflectionMatrix.multiplyMatrices(camera.projectionMatrix, reflectedViewMatrix); //try ssr camera?
+
       hybridMaterial.uniforms.inverseProjectionMatrix.value.copy(ssrCamera.projectionMatrix).invert();
       hybridMaterial.uniforms.inverseViewMatrix.value.copy(ssrCamera.matrixWorldInverse).invert();
       hybridMaterial.uniforms.cameraWorldPosition.value.copy(ssrCamera.position);
+      hybridMaterial.uniforms.reflectionMatrix.value.copy(reflectionMatrix);
 
       renderer.setRenderTarget(gBuffer);
       renderer.clear(true, true, true);
