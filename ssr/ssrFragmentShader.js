@@ -87,7 +87,7 @@ const ssrFragmentShader = `
             float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
             vec3 specular = spec * lightColor;
 
-            return (ambient + diffuse + specular) * albedo;
+            return albedo + specular;
         }
 
         void main() {
@@ -121,7 +121,8 @@ const ssrFragmentShader = `
             }
 
             if (reflectivity < 0.01 ) { 
-                objectColor = computePhong(albedo, worldNormal, position, viewDir);
+                //objectColor = computePhong(albedo, worldNormal, position, viewDir);
+                objectColor = albedo;
 
                 FragColor = vec4(objectColor, alpha);
                 return;
@@ -190,7 +191,9 @@ const ssrFragmentShader = `
                         //if (hitPosition.y < 0.1) continue;  // حذف رفلکت سطح روی اشیا
                         vec3 hitWorldNormal = normalize( ( inverseViewMatrix * vec4( vN, 0.0 ) ).xyz );
                         vec3 hitViewDir = normalize(cameraWorldPosition - hitPosition);
-                        objectColor = computePhong(reflectColor, hitWorldNormal, hitPosition, hitViewDir);
+                        //objectColor = computePhong(reflectColor, worldNormal, hitPosition, hitViewDir);
+                        objectColor = reflectColor;
+                        //objectColor=albedo;
  
                         coloured = true;
                         break;
@@ -199,7 +202,8 @@ const ssrFragmentShader = `
             }
 
             if(!coloured){
-                objectColor = computePhong(albedo, worldNormal, position, viewDir);
+                //objectColor = computePhong(albedo, worldNormal, position, viewDir);
+                objectColor = albedo;
             }
 
             float edge = min(min(uv.x, uv.y), min(1.0 - uv.x, 1.0 - uv.y));

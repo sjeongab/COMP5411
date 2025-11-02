@@ -3,7 +3,7 @@ const gBufferFragmentShader = `
 
     uniform vec3 uColor;
     uniform float uReflectivity;
-    uniform int uShininess;
+    uniform float uShininess;
     uniform vec3 uSpecular;
 
     varying vec3 vNormal;
@@ -28,16 +28,17 @@ const gBufferFragmentShader = `
 
         vec3 specular = vec3(0.0);
 
-        if(uShininess != 0){
-            vec3 viewDir = normalize(vViewPosition-vWorldPosition);
+        if(uShininess > 0.0){
+            vec3 camPos = vec3(0, 75, 160);
+            vec3 viewDir = normalize(camPos-vWorldPosition);
             vec3 reflectDir = reflect(-lightDirection, vNormal);
             float spec = max(dot(reflectDir, viewDir), 0.0);
-            specular = pow(spec, float(uShininess)) * uSpecular;
+            specular = pow(spec, uShininess) * uSpecular;
         }
 
         //gColor = vec4(specular, 1.0);
-        //gColor = vec4(ambient+diffuse+specular, 1.0);
-        gColor = vec4(uColor, 1.0);
+        gColor = vec4(ambient+diffuse+specular, 1.0);
+        //gColor = vec4(uColor, 1.0);
         //gColor = vec4((ambient+diffuse)*uColor, 1.0);
         gNormal = vec4(vNormal, 1.0);
         gPosition = vec4(vWorldPosition, 1.0);
