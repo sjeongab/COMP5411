@@ -16,14 +16,10 @@ function clearPreviousScene() {
 async function loadModule(modulePath) {
   clearPreviousScene();
 
-  try {
-    const module = await import(`./${modulePath}`);
+  const module = await import(`./${modulePath}`);
     currentModule = module;
     currentModule.init(container);
     console.log(`Loaded module: ${modulePath}`);
-  } catch (error) {
-    console.error('Failed to load module:', error);
-  }
 }
 
 // Add an event listener to the selector

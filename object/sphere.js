@@ -17,4 +17,5 @@ function addSphere(scene, config) {
     scene.add(sphere);
 }
 
+
 export{addSphere};

@@ -80,4 +80,4 @@ function addLightMarker(scene, position = [10, 20, 10], radius = 3.0) {
   return marker;
 }
 
-export { addPlainObjects, addSSRObjects, addLightMarker }
+export { objects, addPlainObjects, addSSRObjects, addLightMarker }

@@ -113,7 +113,7 @@ export function init(canvas) {
       if(!isRunning) return;
       updateFPS(currentTime);
       cameraControls.update();
-
+      
       updateReflectedViewMatrix();
       reflectionMatrix.multiplyMatrices(camera.projectionMatrix, reflectedViewMatrix); //try ssr camera?
 
