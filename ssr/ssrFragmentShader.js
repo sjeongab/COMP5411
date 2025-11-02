@@ -1,3 +1,4 @@
+// ssrFragmentShader.js
 const ssrFragmentShader = `
         #include <packing>
 
@@ -18,7 +19,7 @@ const ssrFragmentShader = `
         uniform float cameraNear;
         uniform float cameraFar;
         uniform int mode;
-        
+        uniform int phongMode;  // جدید: 1 برای Phong on, 0 برای off
 
         out vec4 FragColor;
 
@@ -74,6 +75,23 @@ const ssrFragmentShader = `
 			return xy;
 		}
 
+        vec3 computePhong(vec3 albedo, vec3 normal, vec3 position, vec3 viewDir) {
+            vec3 lightPos = vec3(0, 100, 100);
+            vec3 lightColor = vec3(1.5, 1.5, 1.5);
+            float shininess = 64.0;
+
+            vec3 lightDir = normalize(lightPos - position);
+            vec3 reflectDir = reflect(-lightDir, normal);
+
+            vec3 ambient = 0.2 * lightColor;
+            float diff = max(dot(normal, lightDir), 0.0);
+            vec3 diffuse = diff * lightColor;
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+            vec3 specular = spec * lightColor;
+
+            return (ambient + diffuse + specular) * albedo;
+        }
+
         void main() {
         
             vec2 uv = gl_FragCoord.xy / resolution;
@@ -88,6 +106,8 @@ const ssrFragmentShader = `
             vec3 objectColor;
             float clipW = projectionMatrix[2][3] * viewZ+projectionMatrix[3][3];
             vec3 viewPosition=getViewPosition( uv, depth, clipW );
+            vec3 worldNormal = normalize( ( inverseViewMatrix * vec4( normal, 0.0 ) ).xyz );
+            vec3 viewDir = normalize(cameraWorldPosition - position);
             bool coloured = false;
             float alpha = 1.0;
 
@@ -101,120 +121,107 @@ const ssrFragmentShader = `
                 return;
             }
 
-            for(int j = 0; j<1; j++){
-            if(-viewZ>cameraFar) {
+            if(-viewZ > cameraFar) {
                 FragColor = vec4(0.0, 0.0, 0.0, 0.0);
                 return;
             }
 
-            if (reflectivity < 1.0 ) { 
-                objectColor = albedo;
-                coloured = true;
-                break;
+            if (reflectivity < 0.01 ) { 
+                if(phongMode == 1) {
+                    objectColor = computePhong(albedo, worldNormal, position, viewDir);
+                } else {
+                    objectColor = albedo;
+                }
+                FragColor = vec4(objectColor, alpha);
+                return;
             }
-            
 
-            vec2 d0=gl_FragCoord.xy;
-			vec2 d1;
+            vec2 d0 = gl_FragCoord.xy;
+            vec2 d1;
 
-			vec3 viewNormal=getViewNormal( uv );
+            vec3 viewNormal = getViewNormal( uv );
 
-            vec3 viewIncidentDir=vec3(0,0,-1);
-            vec3 viewReflectDir=reflect(viewIncidentDir,viewNormal);
-
+            vec3 viewIncidentDir = vec3(0,0,-1);
+            vec3 viewReflectDir = reflect(viewIncidentDir, viewNormal);
 
             float maxDistance = 1500.0;
-            float maxReflectRayLen=maxDistance/dot(-viewIncidentDir,viewNormal);
+            float denom = max(dot(-viewIncidentDir, viewNormal), 0.30);
+            float maxReflectRayLen = min(maxDistance / denom, maxDistance);
 
+            vec3 d1viewPosition = viewPosition + viewReflectDir * maxReflectRayLen;
+            d1 = viewPositionToXY(d1viewPosition);
 
-            vec3 d1viewPosition=viewPosition+viewReflectDir*maxReflectRayLen;
-            d1=viewPositionToXY(d1viewPosition);
-
-			float totalLen=length(d1-d0);
-			float xLen=d1.x-d0.x;
-			float yLen=d1.y-d0.y;
-			float totalStep=max(abs(xLen),abs(yLen));
-			float xSpan=xLen/totalStep;
-			float ySpan=yLen/totalStep;
+            float totalLen = length(d1 - d0);
+            float xLen = d1.x - d0.x;
+            float yLen = d1.y - d0.y;
+            float totalStep = max(abs(xLen), abs(yLen));
+            float xSpan = xLen / totalStep;
+            float ySpan = yLen / totalStep;
 
             int MAX_STEP = 1000;
 
-            for(float i=0.;i<float(MAX_STEP);i++){
-				if(i>=totalStep) break;
-				vec2 xy=vec2(d0.x+i*xSpan,d0.y+i*ySpan);
-				float s=length(xy-d0)/totalLen;
-				vec2 uv=xy/resolution;
+            for(float i = 0.; i < float(MAX_STEP); i++){
+                if(i >= totalStep) break;
+                vec2 xy = vec2(d0.x + i * xSpan, d0.y + i * ySpan);
+                float s = length(xy - d0) / totalLen;
+                vec2 uvS = xy / resolution;
 
-                float d = getDepth(uv);
-				float vZ = getViewZ( d );
-                if(-vZ>=cameraFar) continue;
-				float cW = projectionMatrix[2][3] * vZ+projectionMatrix[3][3];
-				vec3 vP=getViewPosition( uv, d, cW );
+                float d = getDepth(uvS);
+                float vZ = getViewZ( d );
+                if(-vZ >= cameraFar) continue;
+                float cW = projectionMatrix[2][3] * vZ + projectionMatrix[3][3];
+                vec3 vP = getViewPosition( uvS, d, cW );
 
-                float viewReflectRayZ=viewPosition.z+s*(d1viewPosition.z-viewPosition.z);
-                if(viewReflectRayZ<=vZ){
+                float viewReflectRayZ = viewPosition.z + s * (d1viewPosition.z - viewPosition.z);
+                if(viewReflectRayZ <= vZ){
                     bool hit;
 
-                    float away=pointToLineDistance(vP,viewPosition,d1viewPosition);
+                    float away = pointToLineDistance(vP, viewPosition, d1viewPosition);
 
                     float minThickness;
-                    vec2 xyNeighbor=xy;
-                    xyNeighbor.x+=1.;
-                    vec2 uvNeighbor=xyNeighbor/resolution;
-                    vec3 vPNeighbor=getViewPosition(uvNeighbor,d,cW);
-                    minThickness=vPNeighbor.x-vP.x;
-                    minThickness*=3.;
-                    float tk=max(minThickness,thickness);
+                    vec2 xyNeighbor = xy;
+                    xyNeighbor.x += 1.;
+                    vec2 uvNeighbor = xyNeighbor / resolution;
+                    vec3 vPNeighbor = getViewPosition(uvNeighbor, d, cW);
+                    minThickness = vPNeighbor.x - vP.x;
+                    minThickness *= 3.;
+                    float tk = max(minThickness, thickness);
 
-
-                    hit=away<=tk;
+                    hit = away <= tk;
 
                     if (hit){
-                    vec3 vN=getViewNormal( uv );
-                    if(dot(viewReflectDir,vN)>=0.) continue;
-                    float distance=pointPlaneDistance(vP,viewPosition,viewNormal);
-                    if(distance>maxDistance) break;
-                    vec3 reflectColor = texture2D(gColor,uv).rgb;
-                    objectColor = reflectColor;
-                    coloured = true;
-                    break;
+                        vec3 vN = getViewNormal( uvS );
+                        if(dot(viewReflectDir, vN) >= 0.) continue;
+                        float distance = pointPlaneDistance(vP, viewPosition, viewNormal);
+                        if(distance > maxDistance) break;
+                        vec3 reflectColor = texture2D(gColor, uvS).rgb;
+                        vec3 hitPosition = texture(gPosition, uvS).xyz;
+                        if (hitPosition.y < 0.1) continue;  // حذف رفلکت سطح روی اشیا
+                        vec3 hitWorldNormal = normalize( ( inverseViewMatrix * vec4( vN, 0.0 ) ).xyz );
+                        vec3 hitViewDir = normalize(cameraWorldPosition - hitPosition);
+                        if(phongMode == 1) {
+                            objectColor = computePhong(reflectColor, hitWorldNormal, hitPosition, hitViewDir);
+                        } else {
+                            objectColor = reflectColor;
+                        }
+                        coloured = true;
+                        break;
                     }  
                 }
-
             }
-                if(!coloured){
-                objectColor = albedo; 
+
+            if(!coloured){
+                if(phongMode == 1) {
+                    objectColor = computePhong(albedo, worldNormal, position, viewDir);
+                } else {
+                    objectColor = albedo;
                 }
             }
 
-
-            //**********add phong shading
-            vec3 lightPos = vec3(0, 100, 100);
-            vec3 lightColor = vec3(1.0, 1.0, 1.0);
-            float shininess = 0.5;
-            // Calculate the light direction (from the fragment to the light)
-            vec3 lightDir = normalize(lightPos - position);
-            
-            // Calculate the view direction (from the fragment to the camera)
-            vec3 viewDir = normalize(viewPosition - position);
-            
-            // Calculate the reflection direction
-            vec3 reflectDir = reflect(-lightDir, normal);
-            
-            // Ambient component
-            vec3 ambient = 0.4 * lightColor; // Adjust ambient factor as needed
-
-            // Diffuse component (Lambertian reflection)
-            float diff = max(dot(normal, lightDir), 0.0);
-            vec3 diffuse = diff * lightColor;
-
-            // Specular component
-            float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-            vec3 specular = spec * lightColor;
-
-            // Combine all components
-            vec3 result = (ambient + diffuse + specular) * objectColor;
-            FragColor = vec4(result, alpha);
+            float edge = min(min(uv.x, uv.y), min(1.0 - uv.x, 1.0 - uv.y));
+            float edgeFade = smoothstep(0.005, 0.15, edge);
+            vec3 fadedColor = mix(albedo, objectColor, reflectivity * edgeFade);
+            FragColor = vec4(fadedColor, alpha);
             return;
         }
     `;
