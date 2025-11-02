@@ -33,12 +33,9 @@ const gBufferFragmentShader = `
             vec3 reflectDir = reflect(-lightDirection, vNormal);
             float spec = pow(max(dot(viewDir, reflectDir), 0.0), float(uShininess));
             specular = spec * uColor;
-            //specular = spec * ambientColor;
         }
 
-
-
-        gColor = vec4(ambient+diffuse+specular, 1.0); //TODO: add phong shading to the gColor
+        gColor = vec4(ambient+diffuse+specular, 1.0);
         gNormal = vec4(normalize(vNormal), 1.0);
         gPosition = vec4(vWorldPosition, 1.0);
         gReflection = uReflectivity;

@@ -8,7 +8,7 @@ function addPlane(scene, config) {
               uColor: { value: config.color},
               uReflectivity: {value: config.reflectivity},
               uShininess: {value: config.shininess},
-                uSpecular: {value: config.specular},
+              uSpecular: {value: config.specular},
           },
           vertexShader: gBufferMaterial.vertexShader,
           fragmentShader: gBufferMaterial.fragmentShader,
