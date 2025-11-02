@@ -168,9 +168,6 @@ const ssrFragmentShader = `
                         float distance = pointPlaneDistance(vP, viewPosition, viewNormal);
                         if(distance > maxDistance) break;
                         vec3 reflectColor = texture2D(gColor, uvS).rgb;
-                        vec3 hitPosition = texture(gPosition, uvS).xyz;
-                        if (hitPosition.y < 0.1) continue;  // حذف رفلکت سطح روی اشیا
-                        vec3 hitWorldNormal = normalize( ( inverseViewMatrix * vec4( vN, 0.0 ) ).xyz );
                         objectColor = reflectColor;
 
                         coloured = true;

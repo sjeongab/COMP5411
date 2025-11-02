@@ -6,7 +6,7 @@ import * as THREE from 'three'
 import { gBufferMaterial } from '../gBuffer/gBuffer.js'  // G-buffer pass material
 
 const objects = [
-    {type: 'plane', color: new THREE.Color(0xaaaaaa), reflectivity: 0.8, specular: 0x888888, shininess: 0},
+    {type: 'plane', color: new THREE.Color(0xaaaaaa), reflectivity: 0.8, specular: new THREE.Color(0x888888), shininess: 0},
     { type: 'cube', position: [-40.0, 5.1, 15.0], scale: 10, rotationSpeed: 0, color: new THREE.Color(0XF0DD98), reflectivity: 1.0, specular: new THREE.Color(0x888888), shininess: 0},
     { type: 'sphere', position: [0, 20, 0], scale: 20, rotationSpeed: 0.8, color: new THREE.Color(0XE7C88D), reflectivity: 1.0, specular: new THREE.Color(0xB4955A), shininess: 90 },
     { type: 'sphere', position: [-35.0, 8, -20.0], scale: 8, rotationSpeed: 1.2, color: new THREE.Color(0xE7577F7), reflectivity: 0.5, specular: new THREE.Color(0xB4244C4), shininess: 0},
