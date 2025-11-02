@@ -1,3 +1,4 @@
+// main.js
 import {addObjects} from './object/addObjects.js'
 import * as THREE from 'three'
 import { OrbitControls } from 'OrbitControls'
@@ -5,6 +6,7 @@ import {gBuffer, gBufferMaterial, gColorTexture, gNormalTexture, gPositionTextur
 
 let cameraControls;
 let mode = "SSR"; // Default mode
+let phongMode = "Phong"; // Default phong mode
 
 const scene = new THREE.Scene();
 const ssrScene = new THREE.Scene();
@@ -108,6 +110,25 @@ select.addEventListener('change', () => {
   ssrBufferMaterial.uniforms.mode.value = mode === 'scene' ? 0 : 1;
 });
 
+/* ---------------- Phong mode selection UI ---------------- */
+const phongSelect = document.createElement('select');
+phongSelect.style.position = 'absolute';
+phongSelect.style.top = '40px';  // زیر select قبلی
+phongSelect.style.right = '10px';
+phongSelect.style.padding = '5px';
+phongSelect.innerHTML = `
+  <option value="Phong" selected>Phong On</option>
+  <option value="NoPhong">Phong Off</option>
+`;
+phongSelect.style.zIndex = 2;
+document.body.appendChild(phongSelect);
+
+// Update phong mode when selection changes
+phongSelect.addEventListener('change', () => {
+  phongMode = phongSelect.value;
+  ssrBufferMaterial.uniforms.phongMode.value = phongMode === 'Phong' ? 1 : 0;
+});
+
 /* ---------------- SSR material ---------------- */
 let ssrBufferMaterial = new THREE.ShaderMaterial({
   vertexShader: ssrVertexShader,
@@ -127,6 +148,7 @@ let ssrBufferMaterial = new THREE.ShaderMaterial({
     cameraNear: { value: ssrCamera.near },
     cameraFar: { value: ssrCamera.far },
     mode: { value: mode === 'scene' ? 0 : 1 },
+    phongMode: { value: phongMode === 'Phong' ? 1 : 0 },  // جدید: uniform برای phong mode
   },
   transparent: true,
   depthTest: false,
