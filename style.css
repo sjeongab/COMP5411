@@ -45,3 +45,14 @@ p {
   font-size: 16px;
     z-index: 2;
 }
+#script-selector {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: white;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 5px;
+  font-family: monospace;
+  font-size: 16px;
+z-index: 2;
+}

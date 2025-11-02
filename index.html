@@ -15,9 +15,20 @@
 </head>
 
 <body>
+   <div id="fps">FPS: 0</div>
+    <div id="controls">
+        <select id="script-selector">
+            <option value="scene/ssr.js">SSR</option>
+            <option value="scene/plain.js">Plain</option>
+            
+            <option value="scene/hybrid.js">Hybrid</option>
+            <option value="scene/raytracing.js">Ray Tracing</option>
+           
+            
+        </select>
+    </div>
     
     <canvas id="canvas"></canvas>
-    <script type="module" src="./main.js"></script>
-    <div id="fps"></div>
+    <script type="module" src="./select.js"></script>
 </body>
 </html>

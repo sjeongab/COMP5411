@@ -18,8 +18,6 @@ const ssrFragmentShader = `
         uniform vec3 cameraWorldPosition;
         uniform float cameraNear;
         uniform float cameraFar;
-        uniform int mode;
-        uniform int phongMode;  // جدید: 1 برای Phong on, 0 برای off
 
         out vec4 FragColor;
 
@@ -116,10 +114,6 @@ const ssrFragmentShader = `
                 return;
             }
 
-            if(mode==0) {
-                FragColor = vec4(texture(gColor, uv).rgb, 1.0);
-                return;
-            }
 
             if(-viewZ > cameraFar) {
                 FragColor = vec4(0.0, 0.0, 0.0, 0.0);
@@ -127,11 +121,9 @@ const ssrFragmentShader = `
             }
 
             if (reflectivity < 0.01 ) { 
-                if(phongMode == 1) {
-                    objectColor = computePhong(albedo, worldNormal, position, viewDir);
-                } else {
-                    objectColor = albedo;
-                }
+                //objectColor = computePhong(albedo, worldNormal, position, viewDir);
+                objectColor = albedo;
+
                 FragColor = vec4(objectColor, alpha);
                 return;
             }
@@ -196,14 +188,13 @@ const ssrFragmentShader = `
                         if(distance > maxDistance) break;
                         vec3 reflectColor = texture2D(gColor, uvS).rgb;
                         vec3 hitPosition = texture(gPosition, uvS).xyz;
-                        if (hitPosition.y < 0.1) continue;  // حذف رفلکت سطح روی اشیا
+                        //if (hitPosition.y < 0.1) continue;  // حذف رفلکت سطح روی اشیا
                         vec3 hitWorldNormal = normalize( ( inverseViewMatrix * vec4( vN, 0.0 ) ).xyz );
                         vec3 hitViewDir = normalize(cameraWorldPosition - hitPosition);
-                        if(phongMode == 1) {
-                            objectColor = computePhong(reflectColor, hitWorldNormal, hitPosition, hitViewDir);
-                        } else {
-                            objectColor = reflectColor;
-                        }
+                        //objectColor = computePhong(reflectColor, worldNormal, hitPosition, hitViewDir);
+                        objectColor = reflectColor;
+                        //objectColor=albedo;
+ 
                         coloured = true;
                         break;
                     }  
@@ -211,11 +202,8 @@ const ssrFragmentShader = `
             }
 
             if(!coloured){
-                if(phongMode == 1) {
-                    objectColor = computePhong(albedo, worldNormal, position, viewDir);
-                } else {
-                    objectColor = albedo;
-                }
+                //objectColor = computePhong(albedo, worldNormal, position, viewDir);
+                objectColor = albedo;
             }
 
             float edge = min(min(uv.x, uv.y), min(1.0 - uv.x, 1.0 - uv.y));
