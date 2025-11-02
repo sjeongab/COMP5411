@@ -7,6 +7,8 @@ function addSphere(scene, config) {
               uniforms: {
                   uColor: { value: config.color },
                   uReflectivity: {value: config.reflectivity},
+                  uShininess: {value: config.shininess},
+                  uSpecular: {value: config.specular},
               },
               vertexShader: gBufferMaterial.vertexShader,
               fragmentShader: gBufferMaterial.fragmentShader,

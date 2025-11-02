@@ -3,6 +3,8 @@ const gBufferFragmentShader = `
 
     uniform vec3 uColor;
     uniform float uReflectivity;
+    uniform int uShininess;
+    uniform vec3 uSpecular;
 
     varying vec3 vNormal;
     varying vec3 vWorldPosition;
@@ -23,13 +25,17 @@ const gBufferFragmentShader = `
         vec3 lightColor = vec3(1.0,1.0,1.0); // TODO: import lightColor as uniform
         vec3 diffuse = diff * lightColor * uColor;
 
-        // TODO: add specular attribute to objects and import them as uniform
-        // TODO: calculate specular
-        //vec3 viewDir = normalize(vViewPosition - vWorldPosition);
-        //vec3 reflectDir = reflect(-lightDirection, vNormal);
-        //float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-        //vec3 specular = spec * lightColor * specularColor;
-        vec3 specular = vec3(0.0, 0.0, 0.0); //remove
+        vec3 specular = vec3(0.0);
+
+        if(uShininess != 0){
+            vec3 lightPos = vec3(5, 10, 7);
+            vec3 viewDir = normalize(vViewPosition - vWorldPosition);
+            vec3 reflectDir = reflect(-lightDirection, vNormal);
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), float(uShininess));
+            specular = spec * uColor;
+            //specular = spec * ambientColor;
+        }
+
 
 
         gColor = vec4(ambient+diffuse+specular, 1.0); //TODO: add phong shading to the gColor
