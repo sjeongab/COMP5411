@@ -1,11 +1,14 @@
-import {addPlainObjects, addSSRObjects} from './object/addObjects.js'
+// main.js
+import {addObjects} from './object/addObjects.js'
 import * as THREE from 'three'
 import { OrbitControls } from 'OrbitControls'
 import {gBuffer, gBufferMaterial} from './gBuffer/gBuffer.js'
 import { addSkyBox } from './object/addSkyBox.js'
 import {loadSSRMaterial} from './ssr/ssrBuffer.js'
 
-let mode = "Plain"; // Default mode
+let cameraControls;
+let mode = "SSR"; // Default mode
+let phongMode = "Phong"; // Default phong mode
 
 const scene = new THREE.Scene();
 let ssrScene, ssrCamera, ssrMaterial, postProcessQuad;
@@ -107,6 +110,51 @@ switch(mode) {
 }
 };
 
+/* ---------------- Phong mode selection UI ---------------- */
+const phongSelect = document.createElement('select');
+phongSelect.style.position = 'absolute';
+phongSelect.style.top = '40px';  // زیر select قبلی
+phongSelect.style.right = '10px';
+phongSelect.style.padding = '5px';
+phongSelect.innerHTML = `
+  <option value="Phong" selected>Phong On</option>
+  <option value="NoPhong">Phong Off</option>
+`;
+phongSelect.style.zIndex = 2;
+document.body.appendChild(phongSelect);
+
+// Update phong mode when selection changes
+phongSelect.addEventListener('change', () => {
+  phongMode = phongSelect.value;
+  ssrBufferMaterial.uniforms.phongMode.value = phongMode === 'Phong' ? 1 : 0;
+});
+
+/* ---------------- SSR material ---------------- */
+let ssrBufferMaterial = new THREE.ShaderMaterial({
+  vertexShader: ssrVertexShader,
+  fragmentShader: ssrFragmentShader,
+  glslVersion: THREE.GLSL3,
+  uniforms: {
+    gColor: { value: gColorTexture },
+    gNormal: { value: gNormalTexture },
+    gPosition: { value: gPositionTexture },
+    gReflection: { value: gReflectionTexture },
+    gDepth: { value: gBuffer.depthTexture },
+    resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+    projectionMatrix: { value: ssrCamera.projectionMatrix },
+    inverseProjectionMatrix: { value: new THREE.Matrix4() },
+    inverseViewMatrix: { value: new THREE.Matrix4() },
+    cameraWorldPosition: { value: ssrCamera.position },
+    cameraNear: { value: ssrCamera.near },
+    cameraFar: { value: ssrCamera.far },
+    mode: { value: mode === 'scene' ? 0 : 1 },
+    phongMode: { value: phongMode === 'Phong' ? 1 : 0 },  // جدید: uniform برای phong mode
+  },
+  transparent: true,
+  depthTest: false,
+  depthWrite: false,
+  blending: THREE.NormalBlending
+});
 
 
 const ambientLight = new THREE.AmbientLight(0x404040);

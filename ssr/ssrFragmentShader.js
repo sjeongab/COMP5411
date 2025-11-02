@@ -87,7 +87,7 @@ const ssrFragmentShader = `
             float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
             vec3 specular = spec * lightColor;
 
-            return albedo + specular;
+            return (ambient + diffuse + specular) * albedo;
         }
 
         void main() {
