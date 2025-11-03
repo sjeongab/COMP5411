@@ -21,11 +21,6 @@ export function init(canvas){
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
     camera.position.set(0, 75, 160);
 
-    //camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-
-    //camera.position.set(0, 75, 160);
-    //camera.lookAt(0, 0, 0);
-
     let cameraControls = new OrbitControls(camera, renderer.domElement);
     cameraControls.target.set(0, 0, 0);
     cameraControls.maxDistance = 400;
@@ -39,13 +34,7 @@ export function init(canvas){
     scene.add(sphere);*/
 
     // Full-screen quad for ray tracing (covers the entire viewport)
-    const quadGeometry = new THREE.PlaneGeometry(2, 2);
-
-    const ambientLight = new THREE.AmbientLight(0x404040);
-    scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(5, 10, 7);
-    scene.add(directionalLight);
+    
 
     
     // Custom shader for ray tracing
@@ -53,6 +42,7 @@ export function init(canvas){
     uniforms: {
         // Camera properties
         cameraPos: { value: camera.position },
+        uCamMatrix: { value: camera.matrixWorld},
         invViewProj: { value: new THREE.Matrix4()},
         //cameraDir: { value: new THREE.Vector3(0, 0, -1) }, // Forward direction; updated in animate
         resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
@@ -61,15 +51,15 @@ export function init(canvas){
             value: [
                 // Sphere 1
                 {
-                    position: new THREE.Vector3(0, 20, 0),
-                    radius: 20.0,
-                    color: new THREE.Color(0xff0000), // Red
+                    position: new THREE.Vector3(0, 70, 142),
+                    radius: 5.0,
+                    color: new THREE.Color(0x12537a), // Red
                     reflectivity: 0.5
                 },
                 // Sphere 2
                 {
-                    position: new THREE.Vector3(5, 0, 0),
-                    radius: 2.0,
+                    position: new THREE.Vector3(2, 1.5, -1),
+                    radius: 1.5,
                     color: new THREE.Color(0x00ff00), // Green
                     reflectivity: 0.8
                 }
@@ -77,9 +67,9 @@ export function init(canvas){
         },
         
         // Lighting (from earlier shaders)
-        lightDir: { value: new THREE.Vector3(0.379, 0.758, 0.531).normalize() },
-        lightColor: { value: new THREE.Color(0xffffff) },
-        ambientColor: { value: new THREE.Color(0x404040) },
+        lightDir: { value: new THREE.Vector3(0.5, 0.7, 0.5).normalize() },
+        lightColor: { value: new THREE.Color(1.0, 1.0, 1.0) },
+        //ambientColor: { value: new THREE.Color(0x404040) },
     },
     vertexShader: raytracingVertexShader,
     fragmentShader: raytracingFragmentShader,
@@ -135,8 +125,9 @@ export function init(canvas){
     });*/
 
     // Create the quad mesh
-    //const quad = new THREE.Mesh(quadGeometry, rayTraceMaterial);
-    //scene.add(quad);
+    const quadGeometry = new THREE.PlaneGeometry(2, 2);
+    const quad = new THREE.Mesh(quadGeometry, rayTraceMaterial);
+    scene.add(quad);
 
     // Handle window resize
     window.addEventListener('resize', () => {
@@ -154,9 +145,10 @@ export function init(canvas){
 
         requestAnimationFrame(animate);
 
-        //rayTraceMaterial.uniforms.cameraPos.value.copy(camera.position);
+        rayTraceMaterial.uniforms.cameraPos.value.copy(camera.position);
+        rayTraceMaterial.uniforms.uCamMatrix.value.copy(camera.matrixWorld);
         //const viewProj = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); 
-        //rayTraceMaterial.uniforms.invViewProj.value.copy(viewProj.invert());
+        rayTraceMaterial.uniforms.invViewProj.value.copy(camera.projectionMatrix).invert();
 
         // Update camera direction (if camera rotates)
         //const forward = new THREE.Vector3(0, 0, -1);
