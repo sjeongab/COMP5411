@@ -51,15 +51,15 @@ export function init(canvas){
             value: [
                 // Sphere 1
                 {
-                    position: new THREE.Vector3(0, 70, 142),
-                    radius: 5.0,
+                    position: new THREE.Vector3(0, 20, 0),
+                    radius: 20.0,
                     color: new THREE.Color(0x12537a), // Red
                     reflectivity: 0.5
                 },
                 // Sphere 2
                 {
-                    position: new THREE.Vector3(2, 1.5, -1),
-                    radius: 1.5,
+                    position: new THREE.Vector3(-35.0, 8, -20.0),
+                    radius: 8.0,
                     color: new THREE.Color(0x00ff00), // Green
                     reflectivity: 0.8
                 }

@@ -55,17 +55,17 @@ const raytracingFragmentShader = `
         float t = 0.0;
         vec3 color = vec3(0.0);
         bool hit = false;
-        for (int i = 0; i < 100; i++){
+        for (int i = 0; i < 128; i++){
             vec3 pos = origin + t * direction;
             vec3 hitColor;
             float hitReflectivity;
             float d = intersect(pos, hitColor, hitReflectivity);
-            if (d < 20.0){
-                color = vec3(d/1000.0, hitColor.g, hitColor.b);
+            if (d < 0.001){
+                color = hitColor;
                 hit = true;
                 return color;
             }
-            t += 1.0;
+            t += d;
             if (t > 500.0) break;
         }
         return vec3(0.2, 0.4, 0.4);
@@ -81,10 +81,10 @@ const raytracingFragmentShader = `
         vec3 rayDir = normalize((uCamMatrix * vec4(rayEye.xyz, 0.0)).xyz);
 
         //vec3 rayDir = vec3(0, -0.4244, -0.9053);
-        vec3 result = rayMarch(cameraPos, rayClip.xyz);
+        vec3 result = rayMarch(cameraPos, rayDir);
 
         FragColor = vec4(result, 1.0);
-        //FragColor = vec4(rayDir, 1.0);
+        //FragColor = vec4(-rayDir, 1.0);
     }
 `;
 
