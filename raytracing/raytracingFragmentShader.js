@@ -61,7 +61,6 @@ const raytracingFragmentShader = `
         return length(max(dist, 0.0)) + min(max(dist.x, max(dist.y, dist.z)), 0.0);
     }
 
-
     float intersect(vec3 pos, out vec3 hitColor, out float hitReflectivity) {
         float minDist = 1e10;
         hitColor = vec3(0.0);
@@ -94,24 +93,65 @@ const raytracingFragmentShader = `
         return minDist;
     }
 
+    vec3 estimateNormal(vec3 pos){
+    vec3 dummyColor;
+    float dummyRefl;
+    vec3 dummyNorm;
+    const float eps = 0.01;
+    return normalize(vec3(
+        intersect(pos + vec3(eps, 0.0, 0.0), dummyColor, dummyRefl) - intersect(pos - vec3(eps, 0.0, 0.0), dummyColor, dummyRefl),
+        intersect(pos + vec3(0.0, eps, 0.0), dummyColor, dummyRefl) - intersect(pos - vec3(0.0, eps, 0.0), dummyColor, dummyRefl),
+        intersect(pos + vec3(0.0, 0.0, eps), dummyColor, dummyRefl) - intersect(pos - vec3(0.0, 0.0, eps), dummyColor, dummyRefl)
+    ));
+    }
+
     vec3 rayMarch(vec3 origin, vec3 direction) {
-        float t = 0.0;
-        vec3 color = vec3(0.0);
-        bool hit = false;
-        for (int i = 0; i < 128; i++){
-            vec3 pos = origin + t * direction;
+        vec3 finalColor = vec3(0.0);
+        vec3 rayOrigin = origin;
+        vec3 rayDir = direction;
+        float attenuation = 1.0;
+        const int maxBounces = 4;
+
+        for(int bounce = 0; bounce < maxBounces; bounce++){
+            float t = 0.0;
+            bool hit = false;
+            vec3 hitPos;
             vec3 hitColor;
             float hitReflectivity;
-            float d = intersect(pos, hitColor, hitReflectivity);
-            if (d < 0.001){
-                color = hitColor;
-                hit = true;
-                return color;
+            for (int i = 0; i < 128; i++){
+                vec3 pos = rayOrigin + t * rayDir;
+                float d = intersect(pos, hitColor, hitReflectivity);
+                if (d < 0.001){
+                    hitPos = pos;
+                    hit = true;
+                    break;
+                }
+                t += d;
+                if (t > 500.0) break;
             }
-            t += d;
-            if (t > 500.0) break;
+            if (!hit){
+                finalColor += vec3(0.1, 0.2, 0.2) * attenuation;
+                break;
+            }
+
+            vec3 normal = estimateNormal(hitPos);
+            float diff = max(dot(normal, lightDir), 0.0);
+            vec3 lighting = hitColor * lightColor * diff + hitColor * 0.1; // Ambient
+            
+            // Add to final color
+            finalColor += lighting * attenuation * (1.0 - hitReflectivity);
+
+            
+            // If not reflective, stop
+            if (hitReflectivity <= 0.1) break;
+            
+            // Prepare next reflection bounce
+            rayDir = reflect(rayDir, normal);
+            rayOrigin = hitPos + normal * 0.01; // Offset
+            attenuation *= hitReflectivity; // Attenuate by reflectivity
+            
         }
-        return vec3(0.1, 0.2, 0.2);
+        return finalColor;
     }
 
 
@@ -123,11 +163,9 @@ const raytracingFragmentShader = `
         rayEye = vec4(rayEye.xy, -1.0, 0.0);
         vec3 rayDir = normalize((uCamMatrix * vec4(rayEye.xyz, 0.0)).xyz);
 
-        //vec3 rayDir = vec3(0, -0.4244, -0.9053);
         vec3 result = rayMarch(cameraPos, rayDir);
 
         FragColor = vec4(result, 1.0);
-        //FragColor = vec4(-rayDir, 1.0);
     }
 `;
 
