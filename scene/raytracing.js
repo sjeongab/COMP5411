@@ -53,18 +53,58 @@ export function init(canvas){
                 {
                     position: new THREE.Vector3(0, 20, 0),
                     radius: 20.0,
-                    color: new THREE.Color(0x12537a), // Red
+                    color: new THREE.Color(0XE7C88D), // Red
                     reflectivity: 0.5
                 },
                 // Sphere 2
                 {
-                    position: new THREE.Vector3(-35.0, 8, -20.0),
+                    position: new THREE.Vector3(-35, 8, -20),
                     radius: 8.0,
-                    color: new THREE.Color(0x00ff00), // Green
+                    color: new THREE.Color(0xE7577F7), // Green
                     reflectivity: 0.8
-                }
+                },
+                {
+                    position: new THREE.Vector3(-20, 9.5, 40),
+                    radius: 9.0,
+                    color: new THREE.Color(0xB1C193), // Green
+                    reflectivity: 0.8
+                },
+                {
+                    position: new THREE.Vector3(15, 10, 25),
+                    radius:10.0,
+                    color: new THREE.Color(0xDF9D97), // Green
+                    reflectivity: 0.8
+                },
+                {
+                    position: new THREE.Vector3(-44, 4, 34),
+                    radius: 5.0,
+                    color: new THREE.Color(0xABD0C4), // Green
+                    reflectivity: 0.8
+                },
             ]
         },
+        boxes: { value: [
+            {
+                position: new THREE.Vector3(-40, 5.1, 15),
+                scale: 10,
+                color: new THREE.Color(0XF0DD98),
+                reflectivity: 1.0
+            },
+            {
+                position: new THREE.Vector3(35, 9.5, 40.0),
+                scale: 18,
+                color: new THREE.Color(0xA5CCD6),
+                reflectivity: 1.0
+            },
+            {
+                position: new THREE.Vector3(70, 9.5, 25),
+                scale: 14,
+                color: new THREE.Color(0xA3C0D3),
+                reflectivity: 1.0
+            },
+
+        ]},
+    
         
         // Lighting (from earlier shaders)
         lightDir: { value: new THREE.Vector3(0.5, 0.7, 0.5).normalize() },

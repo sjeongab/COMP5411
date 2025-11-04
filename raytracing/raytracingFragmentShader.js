@@ -25,7 +25,15 @@ const raytracingFragmentShader = `
         float reflectivity;
     };
 
-    uniform Sphere spheres[2];
+    struct Box {
+        vec3 position;
+        float scale;
+        vec3 color;
+        float reflectivity;
+    };
+
+    uniform Sphere spheres[5];
+    uniform Box boxes[3];
 
     out vec4 FragColor;
 
@@ -33,18 +41,30 @@ const raytracingFragmentShader = `
         return length(pos - center) - radius;
     }
 
+    float intersectBox(vec3 pos, vec3 center, float scale) {
+        vec3 dist = abs(pos - center) - scale/2.0;
+        return length(max(dist, 0.0)) + min(max(dist.x, max(dist.y, dist.z)), 0.0);
+    }
+
     float intersect(vec3 pos, out vec3 hitColor, out float hitReflectivity) {
         float minDist = 1e10;
         hitColor = vec3(0.0);
         hitReflectivity = 0.0;
 
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 5; i++) {
             float d = intersectSphere(pos, spheres[i].position, spheres[i].radius);
             if (d < minDist){
                 minDist = d;
                 hitColor = spheres[i].color;
                 hitReflectivity = spheres[i].reflectivity;
-                break;
+            }
+        }
+        for (int i=0; i < 3; i++){
+            float d = intersectBox(pos, boxes[i].position, boxes[i].scale);
+            if (d < minDist){
+                minDist = d;
+                hitColor = boxes[i].color;
+                hitReflectivity = boxes[i].reflectivity;
             }
         }
 
@@ -68,7 +88,7 @@ const raytracingFragmentShader = `
             t += d;
             if (t > 500.0) break;
         }
-        return vec3(0.2, 0.4, 0.4);
+        return vec3(0.1, 0.2, 0.2);
     }
 
 
