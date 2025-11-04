@@ -104,6 +104,18 @@ export function init(canvas){
             },
 
         ]},
+        planes: {
+            value: [
+                { 
+                    position: new THREE.Vector3(0, -1, 0),
+                    normal: new THREE.Vector3(0, 1, 0), 
+                    offset: 0.0, 
+                    color: new THREE.Color(0x808080), 
+                    reflectivity: 0.6, 
+                    scale: 200.0 }
+            ]
+
+        },
     
         
         // Lighting (from earlier shaders)
