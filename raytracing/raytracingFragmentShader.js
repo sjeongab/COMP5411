@@ -1,172 +1,191 @@
+// raytracingFragmentShader.js
 const raytracingFragmentShader = `
-    precision highp float;
+precision highp float;
 
-    uniform vec3 cameraPos;
-    uniform mat4 invViewProj; // Inverse view-projection matrix for ray direction
-    uniform vec2 resolution;
+uniform vec3 cameraPos;
+uniform mat4 invViewProj;
+uniform vec2 resolution;
 
-    uniform vec3 lightDir;
-    uniform vec3 lightColor;
-    //uniform vec3 ambientColor;
+uniform vec3 lightDir;
+uniform vec3 lightColor;
+uniform int phongMode;
 
-    uniform mat4  uCamMatrix;
-    uniform mat4  uCamPos;
-    uniform mat4  uInvProj;
+struct Sphere {
+    vec3 position;
+    float radius;
+    vec3 color;
+    float reflectivity;
+};
 
-    struct Ray {
-        vec3 origin;
-        vec3 dir;
-    };
-    
-    struct Sphere {
-        vec3 position;
-        float radius;
-        vec3 color;
-        float reflectivity;
-    };
+struct Box {
+    vec3 position;
+    float scale;
+    vec3 color;
+    float reflectivity;
+};
 
-    struct Box {
-        vec3 position;
-        float scale;
-        vec3 color;
-        float reflectivity;
-    };
+struct Plane {
+    vec3 position;
+    vec3 normal;
+    float offset;
+    vec3 color;
+    float reflectivity;
+    float scale;
+};
 
-    struct Plane{
-        vec3 position;
-        vec3 normal;
-        float offset;
-        vec3 color;
-        float reflectivity;
-        float scale;
-    };
+uniform Sphere spheres[5];
+uniform Box boxes[3];
+uniform Plane planes[1];
 
-    uniform Sphere spheres[5];
-    uniform Box boxes[3];
-    uniform Plane planes[1];
+out vec4 FragColor;
 
-    out vec4 FragColor;
+// --------- SDF ها ----------
+float sdSphere(vec3 p, float r) {
+    return length(p) - r;
+}
 
-    float intersectSphere(vec3 pos, vec3 center, float radius) {
-        return length(pos - center) - radius;
-    }
+float sdBox(vec3 p, vec3 b) {
+    vec3 d = abs(p) - b;
+    return length(max(d, 0.0)) + min(max(d.x, max(d.y, d.z)), 0.0);
+}
 
-    float intersectBox(vec3 pos, vec3 center, float scale) {
-        vec3 dist = abs(pos - center) - scale/2.0;
-        return length(max(dist, 0.0)) + min(max(dist.x, max(dist.y, dist.z)), 0.0);
-    }
+// صحنه: کمترین فاصله + رنگ/رفلکت
+float mapScene(vec3 pos, out vec3 hitColor, out float hitReflectivity) {
+    float minDist = 1e10;
+    hitColor = vec3(0.0);
+    hitReflectivity = 0.0;
 
-    float intersectPlane(vec3 pos, vec3 center, float scale) {
-        vec3 dist = abs(pos - center) - vec3(scale/2.0, 0.01, scale/2.0);
-        return length(max(dist, 0.0)) + min(max(dist.x, max(dist.y, dist.z)), 0.0);
-    }
-
-    float intersect(vec3 pos, out vec3 hitColor, out float hitReflectivity) {
-        float minDist = 1e10;
-        hitColor = vec3(0.0);
-        hitReflectivity = 0.0;
-
-        for (int i = 0; i < 5; i++) {
-            float d = intersectSphere(pos, spheres[i].position, spheres[i].radius);
-            if (d < minDist){
-                minDist = d;
-                hitColor = spheres[i].color;
-                hitReflectivity = spheres[i].reflectivity;
-            }
+    // spheres
+    for (int i = 0; i < 5; i++) {
+        float d = sdSphere(pos - spheres[i].position, spheres[i].radius);
+        if (d < minDist) {
+            minDist = d;
+            hitColor = spheres[i].color;
+            hitReflectivity = spheres[i].reflectivity;
         }
-        for (int i=0; i < 3; i++){
-            float d = intersectBox(pos, boxes[i].position, boxes[i].scale);
-            if (d < minDist){
-                minDist = d;
-                hitColor = boxes[i].color;
-                hitReflectivity = boxes[i].reflectivity;
-            }
-        }
+    }
 
-        float d = intersectPlane(pos, planes[0].position, planes[0].scale);
-        if (d < minDist){
+    // boxes
+    for (int i = 0; i < 3; i++) {
+        float d = sdBox(pos - boxes[i].position, vec3(boxes[i].scale * 0.5));
+        if (d < minDist) {
+            minDist = d;
+            hitColor = boxes[i].color;
+            hitReflectivity = boxes[i].reflectivity;
+        }
+    }
+
+    // plane به صورت باکس خیلی نازک بزرگ
+    {
+        vec3 halfSize = vec3(planes[0].scale * 0.5, 0.01, planes[0].scale * 0.5);
+        float d = sdBox(pos - planes[0].position, halfSize);
+        if (d < minDist) {
             minDist = d;
             hitColor = planes[0].color;
             hitReflectivity = planes[0].reflectivity;
         }
-
-        return minDist;
     }
 
-    vec3 estimateNormal(vec3 pos){
+    return minDist;
+}
+
+// تخمین نرمال با مشتق عددی روی SDF
+vec3 estimateNormal(vec3 pos) {
     vec3 dummyColor;
     float dummyRefl;
-    vec3 dummyNorm;
-    const float eps = 0.01;
-    return normalize(vec3(
-        intersect(pos + vec3(eps, 0.0, 0.0), dummyColor, dummyRefl) - intersect(pos - vec3(eps, 0.0, 0.0), dummyColor, dummyRefl),
-        intersect(pos + vec3(0.0, eps, 0.0), dummyColor, dummyRefl) - intersect(pos - vec3(0.0, eps, 0.0), dummyColor, dummyRefl),
-        intersect(pos + vec3(0.0, 0.0, eps), dummyColor, dummyRefl) - intersect(pos - vec3(0.0, 0.0, eps), dummyColor, dummyRefl)
-    ));
-    }
+    const float eps = 0.001;
 
-    vec3 rayMarch(vec3 origin, vec3 direction) {
-        vec3 finalColor = vec3(0.0);
-        vec3 rayOrigin = origin;
-        vec3 rayDir = direction;
-        float attenuation = 1.0;
-        const int maxBounces = 10;
+    float dx = mapScene(pos + vec3(eps, 0.0, 0.0), dummyColor, dummyRefl)
+             - mapScene(pos - vec3(eps, 0.0, 0.0), dummyColor, dummyRefl);
+    float dy = mapScene(pos + vec3(0.0, eps, 0.0), dummyColor, dummyRefl)
+             - mapScene(pos - vec3(0.0, eps, 0.0), dummyColor, dummyRefl);
+    float dz = mapScene(pos + vec3(0.0, 0.0, eps), dummyColor, dummyRefl)
+             - mapScene(pos - vec3(0.0, 0.0, eps), dummyColor, dummyRefl);
 
-        for(int bounce = 0; bounce < maxBounces; bounce++){
-            float t = 0.0;
-            bool hit = false;
-            vec3 hitPos;
-            vec3 hitColor;
-            float hitReflectivity;
-            for (int i = 0; i < 128; i++){
-                vec3 pos = rayOrigin + t * rayDir;
-                float d = intersect(pos, hitColor, hitReflectivity);
-                if (d < 0.001){
-                    hitPos = pos;
-                    hit = true;
-                    break;
-                }
-                t += d;
-                if (t > 500.0) break;
-            }
-            if (!hit){
-                finalColor += vec3(0.1, 0.2, 0.2) * attenuation;
+    return normalize(vec3(dx, dy, dz));
+}
+
+// --------- Ray Marching ----------
+vec3 rayMarch(vec3 origin, vec3 dir) {
+    vec3 col = vec3(0.0);
+    vec3 ro = origin;
+    vec3 rd = dir;
+    float attenuation = 1.0;
+
+    const int MAX_BOUNCES = 3;
+    const int MAX_STEPS = 128;
+    const float MAX_DIST = 500.0;
+    const float SURF_EPS = 0.001;
+
+    for (int bounce = 0; bounce < MAX_BOUNCES; bounce++) {
+        float t = 0.0;
+        bool hit = false;
+        vec3 hitPos = vec3(0.0);
+        vec3 hitColor = vec3(0.0);
+        float hitRefl = 0.0;
+
+        for (int i = 0; i < MAX_STEPS; i++) {
+            vec3 p = ro + rd * t;
+            float d = mapScene(p, hitColor, hitRefl);
+            if (d < SURF_EPS) {
+                hit = true;
+                hitPos = p;
                 break;
             }
-
-            vec3 normal = estimateNormal(hitPos);
-            float diff = max(dot(normal, lightDir), 0.0);
-            vec3 lighting = hitColor * lightColor * diff + hitColor * 0.1; // Ambient
-            
-            // Add to final color
-            finalColor += lighting * attenuation * (1.0 - hitReflectivity);
-
-            
-            // If not reflective, stop
-            if (hitReflectivity <= 0.1) break;
-            
-            // Prepare next reflection bounce
-            rayDir = reflect(rayDir, normal);
-            rayOrigin = hitPos + normal * 0.01; // Offset
-            attenuation *= hitReflectivity; // Attenuate by reflectivity
-            
+            t += d;
+            if (t > MAX_DIST) break;
         }
-        return finalColor;
+
+        if (!hit) {
+            col += vec3(0.02, 0.05, 0.08) * attenuation; // پس‌زمینه
+            break;
+        }
+
+        vec3 n = estimateNormal(hitPos);
+        vec3 L = normalize(lightDir);
+
+        // diffuse + ambient
+        float diff = max(dot(n, L), 0.0);
+        vec3 lighting = hitColor * (0.1 + diff * lightColor);
+
+        // Phong specular
+        if (phongMode == 1) {
+            vec3 V = normalize(cameraPos - hitPos);
+            vec3 R = reflect(-L, n);
+            float spec = pow(max(dot(V, R), 0.0), 32.0);
+            lighting += lightColor * spec * 1.5;
+        }
+
+        col += lighting * attenuation * (1.0 - hitRefl);
+
+        if (hitRefl <= 0.05) break;
+
+        ro = hitPos + n * 0.01;
+        rd = reflect(rd, n);
+        attenuation *= hitRefl;
     }
 
+    return col;
+}
 
-    void main() {
-        vec2 uv = (gl_FragCoord.xy / resolution) * 2.0 - 1.0;
-        vec4 rayClip = vec4(uv, -1.0, 1.0);
-        vec4 rayEye = invViewProj * rayClip;
-        rayEye.xyz /= rayEye.w;
-        rayEye = vec4(rayEye.xy, -1.0, 0.0);
-        vec3 rayDir = normalize((uCamMatrix * vec4(rayEye.xyz, 0.0)).xyz);
+void main() {
+    vec2 ndc = (gl_FragCoord.xy / resolution) * 2.0 - 1.0;
 
-        vec3 result = rayMarch(cameraPos, rayDir);
+    vec4 clipNear = vec4(ndc, -1.0, 1.0);
+    vec4 clipFar  = vec4(ndc,  1.0, 1.0);
 
-        FragColor = vec4(result, 1.0);
-    }
+    vec4 worldNear = invViewProj * clipNear;
+    vec4 worldFar  = invViewProj * clipFar;
+
+    worldNear /= worldNear.w;
+    worldFar  /= worldFar.w;
+
+    vec3 ro = cameraPos;
+    vec3 rd = normalize(worldFar.xyz - ro);
+
+    vec3 color = rayMarch(ro, rd);
+    FragColor = vec4(color, 1.0);
+}
 `;
 
-export {raytracingFragmentShader};
+export { raytracingFragmentShader };
