@@ -1,228 +1,276 @@
 // main.js
-import {addObjects} from './object/addObjects.js'
-import * as THREE from 'three'
-import { OrbitControls } from 'OrbitControls'
-import {gBuffer, gBufferMaterial} from './gBuffer/gBuffer.js'
-import { addSkyBox } from './object/addSkyBox.js'
-import {loadSSRMaterial} from './ssr/ssrBuffer.js'
+import * as THREE from 'three';
+import { OrbitControls } from 'OrbitControls';
 
-let cameraControls;
-let mode = "SSR"; // Default mode
-let phongMode = "Phong"; // Default phong mode
+import { addObjects } from './object/addObjects.js';
+import { addSkyBox } from './object/addSkyBox.js';
 
-const scene = new THREE.Scene();
-let ssrScene, ssrCamera, ssrMaterial, postProcessQuad;
+import { gBuffer } from './gBuffer/gBuffer.js';
+import { loadSSRMaterial } from './ssr/ssrBuffer.js';
+import { loadRaytracingMaterial } from './raytracing/raytracingBuffer.js';
 
-// Assumes canvas variable exists in HTML
+const canvas = document.getElementById('canvas');
+
+// -------- حالت‌ها --------
+let mode = 'Plain';       // 'Plain' | 'SSR' | 'Hybrid' (Ray Tracing)
+let phongMode = 'Phong';  // 'Phong' | 'NoPhong'
+
+// -------- Renderer --------
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// Set renderer color space
 if ('outputColorSpace' in renderer) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 } else if ('outputEncoding' in renderer) {
   renderer.outputEncoding = THREE.sRGBEncoding;
 }
-
-// Disable auto clear to control background rendering
 renderer.autoClear = false;
 
+// -------- Scene & Camera --------
+const scene = new THREE.Scene();
 
-const modeSelect = document.getElementById("modeSelect");
-modeSelect.addEventListener("change", (event) => {
-    mode = event.target.value;
-    console.log(mode);
-    callfunction(mode);
-    //ssrMaterial.uniforms.mode.value = mode === 'scene' ? 0 : 1;
-});
-
-// Camera
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
+const camera = new THREE.PerspectiveCamera(
+  45,
+  window.innerWidth / window.innerHeight,
+  1,
+  500
+);
 camera.position.set(0, 75, 160);
-let cameraControls = new OrbitControls(camera, renderer.domElement);
-cameraControls.target.set(0, 0, 0);
-cameraControls.maxDistance = 400;
-cameraControls.minDistance = 10;
-cameraControls.update();
 
-//const ssrMaterial = loadSSRMaterial(ssrCamera, mode);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0, 0);
+controls.maxDistance = 400;
+controls.minDistance = 10;
+controls.update();
 
-const fpsElem = document.getElementById('fps');
-let lastFrameTime = 0;
+// -------- Lights / Objects / Skybox --------
+scene.add(new THREE.AmbientLight(0x404040));
 
-/* ---------------- Skybox (online) ---------------- */
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+dirLight.position.set(5, 10, 7);
+scene.add(dirLight);
+
+addObjects(scene);
 addSkyBox(renderer, scene);
 
-/* ---------------- Scene content & lights ---------------- */
+// -------- Post-process scenes --------
+let ssrScene = null;
+let ssrCamera = null;
+let ssrQuad = null;
+let ssrMaterial = null;
 
-function callfunction(mode){
-switch(mode) {
-    case "SSR":
-      
-      addSSRObjects(scene);
-      postProcessQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ssrMaterial);
-      
-      ssrScene = new THREE.Scene();
-      ssrScene.add(postProcessQuad);
+let rtScene = null;
+let rtCamera = null;
+let rtQuad = null;
+let raytracingMaterial = null;
 
-      ssrCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-      ssrMaterial = loadSSRMaterial(ssrCamera, mode);
-
-      function animate(currentTime) {
-  
-      requestAnimationFrame(animate);
-
-      ssrMaterial.uniforms.inverseProjectionMatrix.value.copy(ssrCamera.projectionMatrix).invert();
-      ssrMaterial.uniforms.inverseViewMatrix.value.copy(ssrCamera.matrixWorldInverse).invert();
-      ssrMaterial.uniforms.cameraWorldPosition.value.copy(ssrCamera.position);
-      ssrMaterial.uniforms.mode.value = mode === 'Plain' ? 0 : 1;
-
-      // 1) G-Buffer Pass (to RenderTarget)
-      renderer.setRenderTarget(gBuffer);
-      renderer.clear(true, true, true);
-      renderer.render(scene, camera);
-
-      // 2) Skybox + SSR Pass (to screen)
-      renderer.setRenderTarget(null);
-      renderer.clear(true, true, true); // Clear color, depth, and stencil
-      renderer.render(skyboxScene, camera); // Render skybox first
-      renderer.render(scene, camera); // Render skybox + scene objects
-      renderer.render(ssrScene, ssrCamera);
-      }
-      requestAnimationFrame(animate);
-      
-      break;
-
-    case "Hybrid":
-      // code block
-      break;
-
-    default: //plain
-      //TODO: add skybox
-      addPlainObjects(scene);
-      function animate(currentTime) {
-      renderer.clear(true, true, true);
-      renderer.render(scene, camera);
-      }
-      requestAnimationFrame(animate);
-
+// -------- Mode dropdown --------
+const modeSelect = document.getElementById('modeSelect');
+if (modeSelect && modeSelect.value) {
+  mode = modeSelect.value;
 }
-};
+if (modeSelect) {
+  modeSelect.addEventListener('change', (e) => {
+    mode = e.target.value;
+    setupMode();
+  });
+}
 
-/* ---------------- Phong mode selection UI ---------------- */
+// -------- Phong dropdown --------
 const phongSelect = document.createElement('select');
 phongSelect.style.position = 'absolute';
-phongSelect.style.top = '40px';  // زیر select قبلی
+phongSelect.style.top = '40px';
 phongSelect.style.right = '10px';
 phongSelect.style.padding = '5px';
+phongSelect.style.zIndex = 10;
 phongSelect.innerHTML = `
   <option value="Phong" selected>Phong On</option>
   <option value="NoPhong">Phong Off</option>
 `;
-phongSelect.style.zIndex = 2;
 document.body.appendChild(phongSelect);
 
-// Update phong mode when selection changes
 phongSelect.addEventListener('change', () => {
   phongMode = phongSelect.value;
-  ssrBufferMaterial.uniforms.phongMode.value = phongMode === 'Phong' ? 1 : 0;
-});
+  const v = phongMode === 'Phong' ? 1 : 0;
 
-/* ---------------- SSR material ---------------- */
-let ssrBufferMaterial = new THREE.ShaderMaterial({
-  vertexShader: ssrVertexShader,
-  fragmentShader: ssrFragmentShader,
-  glslVersion: THREE.GLSL3,
-  uniforms: {
-    gColor: { value: gColorTexture },
-    gNormal: { value: gNormalTexture },
-    gPosition: { value: gPositionTexture },
-    gReflection: { value: gReflectionTexture },
-    gDepth: { value: gBuffer.depthTexture },
-    resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-    projectionMatrix: { value: ssrCamera.projectionMatrix },
-    inverseProjectionMatrix: { value: new THREE.Matrix4() },
-    inverseViewMatrix: { value: new THREE.Matrix4() },
-    cameraWorldPosition: { value: ssrCamera.position },
-    cameraNear: { value: ssrCamera.near },
-    cameraFar: { value: ssrCamera.far },
-    mode: { value: mode === 'scene' ? 0 : 1 },
-    phongMode: { value: phongMode === 'Phong' ? 1 : 0 },  // جدید: uniform برای phong mode
-  },
-  transparent: true,
-  depthTest: false,
-  depthWrite: false,
-  blending: THREE.NormalBlending
-});
-
-
-const ambientLight = new THREE.AmbientLight(0x404040);
-scene.add(ambientLight);
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-directionalLight.position.set(5, 10, 7);
-scene.add(directionalLight);
-
-/* ---------------- Fullscreen quad for SSR ---------------- */
-//const postProcessQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ssrMaterial);
-//ssrScene.add(postProcessQuad);
-
-/* ---------------- Render loop ---------------- */
-/*function animate(currentTime) {
-  
-  requestAnimationFrame(animate);
-
-  cameraControls.update();
-  
-
-  switch(mode) {
-    case "SSR":
-      // Update matrices for SSR
-      ssrMaterial.uniforms.inverseProjectionMatrix.value.copy(ssrCamera.projectionMatrix).invert();
-      ssrMaterial.uniforms.inverseViewMatrix.value.copy(ssrCamera.matrixWorldInverse).invert();
-      ssrMaterial.uniforms.cameraWorldPosition.value.copy(ssrCamera.position);
-
-      // 1) G-Buffer Pass (to RenderTarget)
-      renderer.setRenderTarget(gBuffer);
-      renderer.clear(true, true, true);
-      renderer.render(scene, camera);
-
-      // 2) Skybox + SSR Pass (to screen)
-      renderer.setRenderTarget(null);
-      renderer.clear(true, true, true); // Clear color, depth, and stencil
-      renderer.render(skyboxScene, camera); // Render skybox first
-      renderer.render(scene, camera); // Render skybox + scene objects
-      renderer.render(ssrScene, ssrCamera); // Render SSR post-process quad
-      break;
-
-    case "Hybrid":
-      // code block
-      break;
-
-    default: //plain
-      //TODO: add skybox
-      renderer.clear(true, true, true);
-      renderer.render(scene, camera);
+  if (ssrMaterial && ssrMaterial.uniforms.phongMode) {
+    ssrMaterial.uniforms.phongMode.value = v;
   }
-  requestAnimationFrame(animate);
-  
-  currentTime *= 0.001;
-  const deltaTime = currentTime - lastFrameTime;
-  lastFrameTime = currentTime;
-  const fps = 1 / deltaTime;
-  fpsElem.textContent = `FPS: ${fps.toFixed(1)}`;
+  if (raytracingMaterial && raytracingMaterial.uniforms.phongMode) {
+    raytracingMaterial.uniforms.phongMode.value = v;
+  }
+});
+
+// -------- Helpers --------
+function clearPost() {
+  ssrScene = ssrCamera = ssrQuad = ssrMaterial = null;
+  rtScene = rtCamera = rtQuad = raytracingMaterial = null;
 }
 
-requestAnimationFrame(animate);*/
+function setupMode() {
+  clearPost();
 
-/* ---------------- Resize ---------------- */
+  if (mode === 'SSR') {
+    // Fullscreen SSR
+    ssrScene = new THREE.Scene();
+    ssrCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+    ssrMaterial = loadSSRMaterial(ssrCamera);
+    if (ssrMaterial.uniforms.phongMode) {
+      ssrMaterial.uniforms.phongMode.value = (phongMode === 'Phong') ? 1 : 0;
+    }
+
+    ssrQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ssrMaterial);
+    ssrQuad.frustumCulled = false;
+    ssrScene.add(ssrQuad);
+
+  } else if (mode === 'Hybrid') {
+    // Fullscreen Ray Tracing
+    rtScene = new THREE.Scene();
+    rtCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+    raytracingMaterial = loadRaytracingMaterial();
+    raytracingMaterial.uniforms.phongMode.value =
+      (phongMode === 'Phong') ? 1 : 0;
+
+    rtQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), raytracingMaterial);
+    rtQuad.frustumCulled = false;
+    rtScene.add(rtQuad);
+
+  } else {
+    // Plain
+  }
+}
+
+// -------- Render Loop --------
+function animate() {
+  requestAnimationFrame(animate);
+
+  controls.update();
+  camera.updateMatrixWorld(true);
+
+  renderer.setRenderTarget(null);
+  renderer.clear(true, true, true);
+
+  // ---- Plain ----
+  if (mode === 'Plain') {
+    renderer.render(scene, camera);
+    return;
+  }
+
+  // ---- SSR ----
+  if (mode === 'SSR' && ssrScene && ssrMaterial) {
+    // 1) صحنه اصلی → gBuffer
+    renderer.setRenderTarget(gBuffer);
+    renderer.clear(true, true, true);
+    renderer.render(scene, camera);
+    renderer.setRenderTarget(null);
+
+    // 2) آپدیت یونیفرم‌ها بر اساس دوربین اصلی
+    const viewMatrix = new THREE.Matrix4()
+      .copy(camera.matrixWorld)
+      .invert(); // V
+    const projMatrix = camera.projectionMatrix; // P
+
+    const invProjMatrix = new THREE.Matrix4()
+      .copy(projMatrix)
+      .invert();
+    const invViewMatrix = new THREE.Matrix4()
+      .copy(viewMatrix)
+      .invert(); // world-from-view
+
+    if (ssrMaterial.uniforms.projectionMatrix) {
+      ssrMaterial.uniforms.projectionMatrix.value.copy(projMatrix);
+    }
+    if (ssrMaterial.uniforms.inverseProjectionMatrix) {
+      ssrMaterial.uniforms.inverseProjectionMatrix.value.copy(invProjMatrix);
+    }
+    if (ssrMaterial.uniforms.inverseViewMatrix) {
+      ssrMaterial.uniforms.inverseViewMatrix.value.copy(invViewMatrix);
+    }
+    if (ssrMaterial.uniforms.cameraWorldPosition) {
+      ssrMaterial.uniforms.cameraWorldPosition.value.copy(camera.position);
+    }
+    if (ssrMaterial.uniforms.cameraNear !== undefined) {
+      ssrMaterial.uniforms.cameraNear.value = camera.near;
+    }
+    if (ssrMaterial.uniforms.cameraFar !== undefined) {
+      ssrMaterial.uniforms.cameraFar.value = camera.far;
+    }
+    if (ssrMaterial.uniforms.resolution) {
+      ssrMaterial.uniforms.resolution.value.set(
+        window.innerWidth,
+        window.innerHeight
+      );
+    }
+    if (ssrMaterial.uniforms.phongMode) {
+      ssrMaterial.uniforms.phongMode.value =
+        (phongMode === 'Phong') ? 1 : 0;
+    }
+
+    renderer.render(ssrScene, ssrCamera);
+    return;
+  }
+
+  // ---- Hybrid (Ray Tracing) ----
+  if (mode === 'Hybrid' && rtScene && raytracingMaterial) {
+    // اینجا فیکس اصلی:
+    // چون با camera رندر نمی‌کنیم، matrixWorldInverse آپدیت نمی‌شه
+    // پس خودمون V را از matrixWorld حساب می‌کنیم
+    const viewMatrix = new THREE.Matrix4()
+      .copy(camera.matrixWorld)
+      .invert();      // V
+    const projMatrix = camera.projectionMatrix;          // P
+
+    const viewProj = new THREE.Matrix4().multiplyMatrices(
+      projMatrix,
+      viewMatrix
+    );                                                   // P * V
+
+    const invViewProj = new THREE.Matrix4()
+      .copy(viewProj)
+      .invert();                                        // (P*V)^-1
+
+    raytracingMaterial.uniforms.invViewProj.value.copy(invViewProj);
+    raytracingMaterial.uniforms.cameraPos.value.copy(camera.position);
+
+    if (raytracingMaterial.uniforms.resolution) {
+      raytracingMaterial.uniforms.resolution.value.set(
+        window.innerWidth,
+        window.innerHeight
+      );
+    }
+    if (raytracingMaterial.uniforms.phongMode) {
+      raytracingMaterial.uniforms.phongMode.value =
+        (phongMode === 'Phong') ? 1 : 0;
+    }
+
+    renderer.render(rtScene, rtCamera);
+    return;
+  }
+
+  // fallback
+  renderer.render(scene, camera);
+}
+
+// -------- Resize --------
 window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  const w = window.innerWidth;
+  const h = window.innerHeight;
 
-  // Update resolution in uniforms if needed
- // if (ssrMaterial && ssrMaterial.uniforms.resolution) {
- //   ssrMaterial.uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
-  //}
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+
+  if (ssrMaterial && ssrMaterial.uniforms.resolution) {
+    ssrMaterial.uniforms.resolution.value.set(w, h);
+  }
+  if (raytracingMaterial && raytracingMaterial.uniforms.resolution) {
+    raytracingMaterial.uniforms.resolution.value.set(w, h);
+  }
 });
+
+// -------- Start --------
+setupMode();
+animate();
