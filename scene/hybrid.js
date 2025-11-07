@@ -88,16 +88,90 @@ export function init(canvas) {
         gNormal: { value: gBuffer.textures[1] },
         gPosition: { value: gBuffer.textures[2] },
         gReflection: { value: gBuffer.textures[3] },
-        gDepth: { value: gBuffer.depthTexture },
+        //gDepth: { value: gBuffer.depthTexture },
         resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-        projectionMatrix: { value: ssrCamera.projectionMatrix },
-        inverseProjectionMatrix: { value: new THREE.Matrix4() },
-        inverseViewMatrix: { value: new THREE.Matrix4() },
-        reflectionMatrix: {value: reflectionMatrix},
-        cameraWorldPosition: { value: ssrCamera.position },
-        cameraNear: { value: ssrCamera.near },
-        cameraFar: { value: ssrCamera.far },
+        //projectionMatrix: { value: ssrCamera.projectionMatrix },
+        //inverseProjectionMatrix: { value: new THREE.Matrix4() },
+        //inverseViewMatrix: { value: new THREE.Matrix4() },
+        //reflectionMatrix: {value: reflectionMatrix},
+        cameraPos: { value: camera.position},
+        uCamMatrix: { value: camera.matrixWorld},
+        invViewProj: {value: new THREE.Matrix4()},
+        //cameraWorldPosition: { value: ssrCamera.position },
+        //cameraNear: { value: ssrCamera.near },
+        //cameraFar: { value: ssrCamera.far },
+        spheres: {
+                    value: [
+                        // Sphere 1
+                        {
+                            position: new THREE.Vector3(0, 20, 0),
+                            radius: 20.0,
+                            color: new THREE.Color(0XE7C88D), // Red
+                            reflectivity: 0.6
+                        },
+                        // Sphere 2
+                        {
+                            position: new THREE.Vector3(-35, 8, -20),
+                            radius: 8.0,
+                            color: new THREE.Color(0xE7577F7), // Green
+                            reflectivity: 1.0
+                        },
+                        {
+                            position: new THREE.Vector3(-20, 9.5, 40),
+                            radius: 9.0,
+                            color: new THREE.Color(0xB1C193), // Green
+                            reflectivity: 0.5
+                        },
+                        {
+                            position: new THREE.Vector3(15, 10, 25),
+                            radius:10.0,
+                            color: new THREE.Color(0xDF9D97), // Green
+                            reflectivity: 0.0
+                        },
+                        {
+                            position: new THREE.Vector3(-44, 4, 34),
+                            radius: 5.0,
+                            color: new THREE.Color(0xABD0C4), // Green
+                            reflectivity: 0.2
+                        },
+                    ]
+                },
+                boxes: { value: [
+                    {
+                        position: new THREE.Vector3(-40, 5.1, 15),
+                        scale: 10,
+                        color: new THREE.Color(0XF0DD98),
+                        reflectivity: 0.7
+                    },
+                    {
+                        position: new THREE.Vector3(35, 9.5, 40.0),
+                        scale: 18,
+                        color: new THREE.Color(0xA5CCD6),
+                        reflectivity: 0.8
+                    },
+                    {
+                        position: new THREE.Vector3(70, 9.5, 25),
+                        scale: 14,
+                        color: new THREE.Color(0xA3C0D3),
+                        reflectivity: 0.9
+                    },
+        
+                ]},
+                planes: {
+                    value: [
+                        { 
+                            position: new THREE.Vector3(0, -1, 0),
+                            normal: new THREE.Vector3(0, 1, 0), 
+                            offset: 0.0, 
+                            color: new THREE.Color(0x808080), 
+                            reflectivity: 0.6, 
+                            scale: 200.0 }
+                    ]
+        
+                },
     },
+    lightDir: { value: new THREE.Vector3(0.5, 0.7, 0.5).normalize() },
+    lightColor: { value: new THREE.Color(1.0, 1.0, 1.0) },
     transparent: true,
     depthTest: false,
     depthWrite: false,
@@ -115,12 +189,15 @@ export function init(canvas) {
       cameraControls.update();
       
       updateReflectedViewMatrix();
+
+      hybridMaterial.uniforms.uCamMatrix.value.copy(camera.matrixWorld);
+      hybridMaterial.uniforms.invViewProj.value.copy(camera.projectionMatrix).invert();
       reflectionMatrix.multiplyMatrices(camera.projectionMatrix, reflectedViewMatrix); //try ssr camera?
 
-      hybridMaterial.uniforms.inverseProjectionMatrix.value.copy(ssrCamera.projectionMatrix).invert();
-      hybridMaterial.uniforms.inverseViewMatrix.value.copy(ssrCamera.matrixWorldInverse).invert();
-      hybridMaterial.uniforms.cameraWorldPosition.value.copy(ssrCamera.position);
-      hybridMaterial.uniforms.reflectionMatrix.value.copy(reflectionMatrix);
+      //hybridMaterial.uniforms.inverseProjectionMatrix.value.copy(ssrCamera.projectionMatrix).invert();
+      //hybridMaterial.uniforms.inverseViewMatrix.value.copy(ssrCamera.matrixWorldInverse).invert();
+      //hybridMaterial.uniforms.cameraWorldPosition.value.copy(ssrCamera.position);
+      //hybridMaterial.uniforms.reflectionMatrix.value.copy(reflectionMatrix);
 
       renderer.setRenderTarget(gBuffer);
       renderer.clear(true, true, true);
@@ -130,7 +207,7 @@ export function init(canvas) {
       renderer.setRenderTarget(null);
       renderer.clear(true, true, true);
       renderer.render(scene, camera);
-      renderer.render(ssrScene, ssrCamera);
+      renderer.render(ssrScene, camera);
 
       // Request the next animation frame
       requestAnimationFrame(animate);

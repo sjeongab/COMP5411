@@ -110,7 +110,7 @@ const raytracingFragmentShader = `
         vec3 rayOrigin = origin;
         vec3 rayDir = direction;
         float attenuation = 1.0;
-        const int maxBounces = 4;
+        const int maxBounces = 10;
 
         for(int bounce = 0; bounce < maxBounces; bounce++){
             float t = 0.0;
