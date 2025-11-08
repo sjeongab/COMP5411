@@ -1,63 +1,139 @@
+// scene/plain.js
 import * as THREE from 'three';
-import { OrbitControls } from 'OrbitControls'
-import {updateFPS} from '../fps.js';
-import {addPlainObjects} from '../object/addObjects.js'
-import { addSkyBox } from '../object/addSkyBox.js'
+import { OrbitControls } from 'OrbitControls';
+import { updateFPS } from '../fps.js';
+import { addPlainObjects } from '../object/addObjects.js';
+import { addSkyBox } from '../object/addSkyBox.js';
+import { createReflectivePlane } from '../plane/planeBuffer.js';
 
-let scene, renderer;
+let scene, renderer, camera, cameraControls;
+let reflectivePlaneMaterial = null;
 let isRunning = true;
 
-// Function to initialize the Three.js scene
+// ---------- init ----------
 export function init(canvas) {
   isRunning = true;
-    // Set up the scene
-    scene = new THREE.Scene();
 
-    // Set up the renderer
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
+  // Scene
+  scene = new THREE.Scene();
+
+  // Renderer
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  // If canvas is not already in the DOM, add it
+  if (!renderer.domElement.parentElement) {
     document.body.appendChild(renderer.domElement);
+  }
 
+  // Camera
+  camera = new THREE.PerspectiveCamera(
+    45,
+    window.innerWidth / window.innerHeight,
+    1,
+    500
+  );
+  camera.position.set(0, 75, 160);
 
-    // Set up the camera
-    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
-    camera.position.set(0, 75, 160);
+  // OrbitControls
+  cameraControls = new OrbitControls(camera, renderer.domElement);
+  cameraControls.target.set(0, 0, 0);
+  cameraControls.maxDistance = 400;
+  cameraControls.minDistance = 10;
+  cameraControls.enableDamping = true;
+  cameraControls.dampingFactor = 0.25;
+  cameraControls.update();
 
-    let cameraControls = new OrbitControls(camera, renderer.domElement);
-    cameraControls.target.set(0, 0, 0);
-    cameraControls.maxDistance = 400;
-    cameraControls.minDistance = 10;
+  // Objects (spheres, boxes, and possibly old plane)
+  addPlainObjects(scene);
+
+  // If addPlainObjects adds a regular plane, hide it
+  scene.traverse((obj) => {
+    if (
+      obj.isMesh &&
+      obj.geometry &&
+      obj.geometry.type === 'PlaneGeometry'
+    ) {
+      obj.visible = false;
+    }
+  });
+
+  // Reflective plane with custom raymarch shader
+  const { mesh: reflectivePlane, material } = createReflectivePlane(scene);
+  // Raise it a bit to avoid depth conflict with anything
+  reflectivePlane.position.y += 0.001;
+  scene.add(reflectivePlane);
+  reflectivePlaneMaterial = material;
+
+  // Skybox
+  addSkyBox(renderer, scene);
+
+  // Lights
+  const ambientLight = new THREE.AmbientLight(0x404040);
+  scene.add(ambientLight);
+
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+  directionalLight.position.set(5, 10, 7);
+  scene.add(directionalLight);
+
+  // Resize handler
+  window.addEventListener('resize', onWindowResize);
+
+  // Loop
+  function animate(currentTime) {
+    if (!isRunning) return;
+
+    updateFPS(currentTime);
     cameraControls.update();
 
-    // Create a cube
-    addPlainObjects(scene);
-    addSkyBox(renderer, scene);
-    const ambientLight = new THREE.AmbientLight(0x404040);
-    scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(5, 10, 7);
-    scene.add(directionalLight);
+    // Update shader uniforms for plane
+    if (reflectivePlaneMaterial && reflectivePlaneMaterial.uniforms) {
+      if (reflectivePlaneMaterial.uniforms.cameraPos) {
+        reflectivePlaneMaterial.uniforms.cameraPos.value.copy(camera.position);
+      }
+      if (reflectivePlaneMaterial.uniforms.lightDir) {
+        // If light is static, this is enough
+        reflectivePlaneMaterial.uniforms.lightDir.value
+          .set(5, 10, 7)
+          .normalize();
+      }
+    }
 
-    // Start the animation loop
-    function animate(currentTime)  {
-      if(!isRunning) return;
-      updateFPS(currentTime);
-      cameraControls.update();
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  }
 
-      // Render the scene
-      renderer.render(scene, camera);
-
-      // Request the next animation frame
-      requestAnimationFrame(animate);
-    };
-
-    requestAnimationFrame(animate); // Return the animation frame ID
+  requestAnimationFrame(animate);
 }
 
+// ---------- Resize ----------
+function onWindowResize() {
+  if (!renderer || !camera) return;
 
-// Function to clean up resources when switching scenes
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+
+// ---------- stop ----------
 export function stop() {
-    document.body.removeChild(document.body.lastElementChild);
+  isRunning = false;
+
+  window.removeEventListener('resize', onWindowResize);
+
+  if (renderer) {
     renderer.dispose();
-    isRunning = false;
+    if (renderer.domElement && renderer.domElement.parentElement) {
+      renderer.domElement.parentElement.removeChild(renderer.domElement);
+    }
+  }
+
+  scene = null;
+  renderer = null;
+  camera = null;
+  cameraControls = null;
+  reflectivePlaneMaterial = null;
 }
