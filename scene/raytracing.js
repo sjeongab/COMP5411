@@ -200,8 +200,9 @@ export function init(canvas){
         rayTraceMaterial.uniforms.cameraPos.value.copy(camera.position);
         rayTraceMaterial.uniforms.uCamMatrix.value.copy(camera.matrixWorld);
         //const viewProj = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); 
-        rayTraceMaterial.uniforms.invViewProj.value.copy(camera.projectionMatrix).invert();
-
+        const viewMatrix = camera.matrixWorldInverse;
+        const viewProj = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, viewMatrix);
+        rayTraceMaterial.uniforms.invViewProj.value.copy(viewProj.invert());
         // Update camera direction (if camera rotates)
         //const forward = new THREE.Vector3(0, 0, -1);
         //forward.applyQuaternion(camera.quaternion);
