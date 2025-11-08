@@ -5,29 +5,30 @@ import { OrbitControls } from 'OrbitControls';
 import { addObjects } from './object/addObjects.js';
 import { addSkyBox } from './object/addSkyBox.js';
 
-import { gBuffer } from './gBuffer/gBuffer.js';
-import { loadSSRMaterial } from './ssr/ssrBuffer.js';
+// Plain mode reflective plane
+import { createReflectivePlane } from './plane/planeBuffer.js';
+
+// SSR / Hybrid (adjust paths according to your project)
+import { loadSSRMaterial, gBuffer } from './ssr/ssrBuffer.js';
 import { loadRaytracingMaterial } from './raytracing/raytracingBuffer.js';
 
-const canvas = document.getElementById('canvas');
+// ---------- Canvas ----------
+const canvas =
+  document.getElementById('canvas') || document.createElement('canvas');
+if (!canvas.parentElement) document.body.appendChild(canvas);
 
-// -------- حالت‌ها --------
-let mode = 'Plain';       // 'Plain' | 'SSR' | 'Hybrid' (Ray Tracing)
-let phongMode = 'Phong';  // 'Phong' | 'NoPhong'
-
-// -------- Renderer --------
+// ---------- Renderer ----------
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+renderer.autoClear = false;
 
 if ('outputColorSpace' in renderer) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 } else if ('outputEncoding' in renderer) {
   renderer.outputEncoding = THREE.sRGBEncoding;
 }
-renderer.autoClear = false;
 
-// -------- Scene & Camera --------
+// ---------- Scene & Camera ----------
 const scene = new THREE.Scene();
 
 const camera = new THREE.PerspectiveCamera(
@@ -38,34 +39,67 @@ const camera = new THREE.PerspectiveCamera(
 );
 camera.position.set(0, 75, 160);
 
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 0, 0);
-controls.maxDistance = 400;
-controls.minDistance = 10;
-controls.update();
+// ---------- OrbitControls ----------
+const cameraControls = new OrbitControls(camera, renderer.domElement);
+cameraControls.target.set(0, 0, 0);
+cameraControls.maxDistance = 400;
+cameraControls.minDistance = 10;
+cameraControls.enableDamping = true;
+cameraControls.dampingFactor = 0.25;
+cameraControls.enableZoom = true;
+cameraControls.update();
 
-// -------- Lights / Objects / Skybox --------
+// ---------- Lights ----------
 scene.add(new THREE.AmbientLight(0x404040));
 
 const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
 dirLight.position.set(5, 10, 7);
 scene.add(dirLight);
 
+// ---------- Scene Content ----------
 addObjects(scene);
 addSkyBox(renderer, scene);
 
-// -------- Post-process scenes --------
+// ---------- Reflective Plane (Plain mode only) ----------
+let reflectivePlane = null;
+let reflectivePlaneMaterial = null;
+
+{
+  const { mesh, material } = createReflectivePlane(scene);
+
+  // Raise it a bit so if an old ground exists, it doesn't go under it
+  mesh.position.y += 0.01;
+
+  // If you have an old ground, you can hide it here (optional)
+  //   scene.traverse((obj) => {
+  //     if (obj.isMesh && obj.userData && obj.userData.isOldGround) {
+  //       obj.visible = false;
+  //     }
+  //   });
+
+  reflectivePlane = mesh;
+  reflectivePlaneMaterial = material;
+  scene.add(reflectivePlane);
+}
+
+// ---------- State ----------
+let mode = 'Plain';       // 'Plain' | 'SSR' | 'Hybrid'
+let phongMode = 'Phong';  // 'Phong' | 'NoPhong'
+
+// ---------- Post-process Pipelines ----------
+// SSR
 let ssrScene = null;
 let ssrCamera = null;
 let ssrQuad = null;
 let ssrMaterial = null;
 
+// Hybrid full-screen RT
 let rtScene = null;
 let rtCamera = null;
 let rtQuad = null;
 let raytracingMaterial = null;
 
-// -------- Mode dropdown --------
+// ---------- Mode Select ----------
 const modeSelect = document.getElementById('modeSelect');
 if (modeSelect && modeSelect.value) {
   mode = modeSelect.value;
@@ -77,7 +111,7 @@ if (modeSelect) {
   });
 }
 
-// -------- Phong dropdown --------
+// ---------- Phong Select ----------
 const phongSelect = document.createElement('select');
 phongSelect.style.position = 'absolute';
 phongSelect.style.top = '40px';
@@ -102,83 +136,102 @@ phongSelect.addEventListener('change', () => {
   }
 });
 
-// -------- Helpers --------
+// ---------- Helpers ----------
 function clearPost() {
   ssrScene = ssrCamera = ssrQuad = ssrMaterial = null;
   rtScene = rtCamera = rtQuad = raytracingMaterial = null;
+  // Keep reflectivePlane; only visibility is controlled in setupMode
 }
 
 function setupMode() {
   clearPost();
 
+  // Reflective plane should only be visible in Plain mode
+  if (reflectivePlane) {
+    reflectivePlane.visible = (mode === 'Plain');
+  }
+
+  // ----- SSR Mode -----
   if (mode === 'SSR') {
-    // Fullscreen SSR
     ssrScene = new THREE.Scene();
     ssrCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
     ssrMaterial = loadSSRMaterial(ssrCamera);
     if (ssrMaterial.uniforms.phongMode) {
-      ssrMaterial.uniforms.phongMode.value = (phongMode === 'Phong') ? 1 : 0;
+      ssrMaterial.uniforms.phongMode.value =
+        (phongMode === 'Phong') ? 1 : 0;
     }
 
-    ssrQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ssrMaterial);
+    ssrQuad = new THREE.Mesh(
+      new THREE.PlaneGeometry(2, 2),
+      ssrMaterial
+    );
     ssrQuad.frustumCulled = false;
     ssrScene.add(ssrQuad);
+  }
 
-  } else if (mode === 'Hybrid') {
-    // Fullscreen Ray Tracing
+  // ----- Hybrid Mode -----
+  else if (mode === 'Hybrid') {
     rtScene = new THREE.Scene();
     rtCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
     raytracingMaterial = loadRaytracingMaterial();
-    raytracingMaterial.uniforms.phongMode.value =
-      (phongMode === 'Phong') ? 1 : 0;
+    if (raytracingMaterial.uniforms.phongMode) {
+      raytracingMaterial.uniforms.phongMode.value =
+        (phongMode === 'Phong') ? 1 : 0;
+    }
 
-    rtQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), raytracingMaterial);
+    rtQuad = new THREE.Mesh(
+      new THREE.PlaneGeometry(2, 2),
+      raytracingMaterial
+    );
     rtQuad.frustumCulled = false;
     rtScene.add(rtQuad);
-
-  } else {
-    // Plain
   }
+
+  // Plain: we don't add anything; only reflectivePlane is active in the scene
 }
 
-// -------- Render Loop --------
+// ---------- Render Loop ----------
 function animate() {
   requestAnimationFrame(animate);
 
-  controls.update();
+  cameraControls.update();
   camera.updateMatrixWorld(true);
 
   renderer.setRenderTarget(null);
   renderer.clear(true, true, true);
 
-  // ---- Plain ----
+  // ----- Plain (Scene + Reflective Plane Shader) -----
   if (mode === 'Plain') {
+    if (reflectivePlaneMaterial) {
+      // Update camera position for the plane shader
+      if (reflectivePlaneMaterial.uniforms.cameraPos) {
+        reflectivePlaneMaterial.uniforms.cameraPos.value.copy(camera.position);
+      }
+      // If you use light in planeFragmentShader:
+      if (reflectivePlaneMaterial.uniforms.lightDir) {
+        reflectivePlaneMaterial.uniforms.lightDir.value
+          .set(5, 10, 7)
+          .normalize();
+      }
+    }
+
     renderer.render(scene, camera);
     return;
   }
 
-  // ---- SSR ----
+  // ----- SSR -----
   if (mode === 'SSR' && ssrScene && ssrMaterial) {
-    // 1) صحنه اصلی → gBuffer
     renderer.setRenderTarget(gBuffer);
     renderer.clear(true, true, true);
     renderer.render(scene, camera);
     renderer.setRenderTarget(null);
 
-    // 2) آپدیت یونیفرم‌ها بر اساس دوربین اصلی
-    const viewMatrix = new THREE.Matrix4()
-      .copy(camera.matrixWorld)
-      .invert(); // V
-    const projMatrix = camera.projectionMatrix; // P
-
-    const invProjMatrix = new THREE.Matrix4()
-      .copy(projMatrix)
-      .invert();
-    const invViewMatrix = new THREE.Matrix4()
-      .copy(viewMatrix)
-      .invert(); // world-from-view
+    const viewMatrix = camera.matrixWorldInverse.clone();
+    const projMatrix = camera.projectionMatrix.clone();
+    const invProjMatrix = projMatrix.clone().invert();
+    const invViewMatrix = viewMatrix.clone().invert();
 
     if (ssrMaterial.uniforms.projectionMatrix) {
       ssrMaterial.uniforms.projectionMatrix.value.copy(projMatrix);
@@ -204,57 +257,40 @@ function animate() {
         window.innerHeight
       );
     }
-    if (ssrMaterial.uniforms.phongMode) {
-      ssrMaterial.uniforms.phongMode.value =
-        (phongMode === 'Phong') ? 1 : 0;
-    }
 
+    renderer.render(scene, camera);
     renderer.render(ssrScene, ssrCamera);
     return;
   }
 
-  // ---- Hybrid (Ray Tracing) ----
+  // ----- Hybrid (Full-screen Ray Tracing) -----
   if (mode === 'Hybrid' && rtScene && raytracingMaterial) {
-    // اینجا فیکس اصلی:
-    // چون با camera رندر نمی‌کنیم، matrixWorldInverse آپدیت نمی‌شه
-    // پس خودمون V را از matrixWorld حساب می‌کنیم
-    const viewMatrix = new THREE.Matrix4()
-      .copy(camera.matrixWorld)
-      .invert();      // V
-    const projMatrix = camera.projectionMatrix;          // P
-
+    const viewMatrix = camera.matrixWorldInverse.clone();
+    const projMatrix = camera.projectionMatrix.clone();
     const viewProj = new THREE.Matrix4().multiplyMatrices(
       projMatrix,
       viewMatrix
-    );                                                   // P * V
-
-    const invViewProj = new THREE.Matrix4()
-      .copy(viewProj)
-      .invert();                                        // (P*V)^-1
+    );
+    const invViewProj = viewProj.clone().invert();
 
     raytracingMaterial.uniforms.invViewProj.value.copy(invViewProj);
     raytracingMaterial.uniforms.cameraPos.value.copy(camera.position);
-
     if (raytracingMaterial.uniforms.resolution) {
       raytracingMaterial.uniforms.resolution.value.set(
         window.innerWidth,
         window.innerHeight
       );
     }
-    if (raytracingMaterial.uniforms.phongMode) {
-      raytracingMaterial.uniforms.phongMode.value =
-        (phongMode === 'Phong') ? 1 : 0;
-    }
 
     renderer.render(rtScene, rtCamera);
     return;
   }
 
-  // fallback
+  // ----- Fallback -----
   renderer.render(scene, camera);
 }
 
-// -------- Resize --------
+// ---------- Resize ----------
 window.addEventListener('resize', () => {
   const w = window.innerWidth;
   const h = window.innerHeight;
@@ -271,6 +307,6 @@ window.addEventListener('resize', () => {
   }
 });
 
-// -------- Start --------
+// ---------- Start ----------
 setupMode();
 animate();
