@@ -2,9 +2,10 @@
 import * as THREE from 'three';
 import { planeVertexShader } from './planeVertexShader.js';
 import { planeFragmentShader } from './planeFragmentShader.js';
+import {gBuffer} from '../gBuffer/gBuffer.js'
 
 function createReflectivePlane(scene) {  // Pass the scene as a parameter now
-  const geometry = new THREE.PlaneGeometry(500, 500);
+  const geometry = new THREE.PlaneGeometry(200, 200);
   geometry.rotateX(-Math.PI / 2);
 
   // Collect actual spheres and boxes from the scene
@@ -37,9 +38,12 @@ function createReflectivePlane(scene) {  // Pass the scene as a parameter now
     lightDir: { value: new THREE.Vector3(5, 10, 7).normalize() },
     lightColor: { value: new THREE.Vector3(1.0, 1.0, 1.0) },
     planeColor: { value: new THREE.Vector3(0.2, 0.2, 0.2) },
-    planeReflectivity: { value: 0.6 },
+    planeReflectivity: { value: 0.2 },
     spheres: { value: spheres.slice(0, 5) },  // Take first 5; adjust if more
     boxes: { value: boxes.slice(0, 3) },     // Take first 3; adjust if more
+    gColor: { value: gBuffer.textures[0] },
+    resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+    uViewProjectionMatrix: {value: new THREE.Matrix4()},
   };
 
   const material = new THREE.ShaderMaterial({

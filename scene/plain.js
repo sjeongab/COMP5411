@@ -4,10 +4,8 @@ import { OrbitControls } from 'OrbitControls';
 import { updateFPS } from '../fps.js';
 import { addPlainObjects } from '../object/addObjects.js';
 import { addSkyBox } from '../object/addSkyBox.js';
-import { createReflectivePlane } from '../plane/planeBuffer.js';
 
 let scene, renderer, camera, cameraControls;
-let reflectivePlaneMaterial = null;
 let isRunning = true;
 
 // ---------- init ----------
@@ -47,24 +45,6 @@ export function init(canvas) {
   // Objects (spheres, boxes, and possibly old plane)
   addPlainObjects(scene);
 
-  // If addPlainObjects adds a regular plane, hide it
-  scene.traverse((obj) => {
-    if (
-      obj.isMesh &&
-      obj.geometry &&
-      obj.geometry.type === 'PlaneGeometry'
-    ) {
-      obj.visible = false;
-    }
-  });
-
-  // Reflective plane with custom raymarch shader
-  const { mesh: reflectivePlane, material } = createReflectivePlane(scene);
-  // Raise it a bit to avoid depth conflict with anything
-  reflectivePlane.position.y += 0.001;
-  scene.add(reflectivePlane);
-  reflectivePlaneMaterial = material;
-
   // Skybox
   addSkyBox(renderer, scene);
 
@@ -85,19 +65,6 @@ export function init(canvas) {
 
     updateFPS(currentTime);
     cameraControls.update();
-
-    // Update shader uniforms for plane
-    if (reflectivePlaneMaterial && reflectivePlaneMaterial.uniforms) {
-      if (reflectivePlaneMaterial.uniforms.cameraPos) {
-        reflectivePlaneMaterial.uniforms.cameraPos.value.copy(camera.position);
-      }
-      if (reflectivePlaneMaterial.uniforms.lightDir) {
-        // If light is static, this is enough
-        reflectivePlaneMaterial.uniforms.lightDir.value
-          .set(5, 10, 7)
-          .normalize();
-      }
-    }
 
     renderer.render(scene, camera);
     requestAnimationFrame(animate);
@@ -135,5 +102,4 @@ export function stop() {
   renderer = null;
   camera = null;
   cameraControls = null;
-  reflectivePlaneMaterial = null;
 }

@@ -11,6 +11,11 @@ uniform vec3 lightColor;
 uniform vec3 planeColor;
 uniform float planeReflectivity;
 
+uniform mat4 uViewProjectionMatrix;
+uniform vec2 resolution;
+uniform sampler2D gColor;
+
+
 struct Sphere {
     vec3 position;
     float radius;
@@ -94,6 +99,10 @@ vec3 traceReflection(vec3 origin, vec3 dir) {
         vec3 p = origin + dir * t;
         float d = mapScene(p, hitColor);
         if (d < SURF_EPS) {
+            vec4 clipSpace = uViewProjectionMatrix * vec4(p, 1.0);
+            vec3 ndc = clipSpace.xyz / clipSpace.w;
+            vec2 screenSpaceXY = (ndc.xy * 0.5 + 0.5);
+            hitColor = texture2D(gColor, screenSpaceXY).rgb;
             hit = true;
             hitPos = p;
             break;

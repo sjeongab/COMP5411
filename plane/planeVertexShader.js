@@ -2,9 +2,6 @@
 const planeVertexShader = `
 precision highp float;
 
-
-
-
 out vec3 vWorldPos;
 out vec3 vWorldNormal;
 

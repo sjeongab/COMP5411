@@ -3,8 +3,8 @@ const raytracingFragmentShader = `
 precision highp float;
 
 uniform vec3 cameraPos;
-uniform vec2 resolution;
 uniform mat4 invViewProj;
+uniform vec2 resolution;
 
 uniform vec3 lightDir;
 uniform vec3 lightColor;
@@ -24,7 +24,7 @@ struct Box {
     float reflectivity;
 };
 
-struct Plane{
+struct Plane {
     vec3 position;
     vec3 normal;
     float offset;
@@ -39,7 +39,7 @@ uniform Plane planes[1];
 
 out vec4 FragColor;
 
-// ---------- SDF ----------
+// --------- SDF ها ----------
 float sdSphere(vec3 p, float r) {
     return length(p) - r;
 }
@@ -49,11 +49,13 @@ float sdBox(vec3 p, vec3 b) {
     return length(max(d, 0.0)) + min(max(d.x, max(d.y, d.z)), 0.0);
 }
 
+// صحنه: کمترین فاصله + رنگ/رفلکت
 float mapScene(vec3 pos, out vec3 hitColor, out float hitReflectivity) {
     float minDist = 1e10;
     hitColor = vec3(0.0);
     hitReflectivity = 0.0;
 
+    // spheres
     for (int i = 0; i < 5; i++) {
         float d = sdSphere(pos - spheres[i].position, spheres[i].radius);
         if (d < minDist) {
@@ -63,6 +65,7 @@ float mapScene(vec3 pos, out vec3 hitColor, out float hitReflectivity) {
         }
     }
 
+    // boxes
     for (int i = 0; i < 3; i++) {
         float d = sdBox(pos - boxes[i].position, vec3(boxes[i].scale * 0.5));
         if (d < minDist) {
@@ -72,6 +75,7 @@ float mapScene(vec3 pos, out vec3 hitColor, out float hitReflectivity) {
         }
     }
 
+    // plane به صورت باکس خیلی نازک بزرگ
     {
         vec3 halfSize = vec3(planes[0].scale * 0.5, 0.01, planes[0].scale * 0.5);
         float d = sdBox(pos - planes[0].position, halfSize);
@@ -85,6 +89,7 @@ float mapScene(vec3 pos, out vec3 hitColor, out float hitReflectivity) {
     return minDist;
 }
 
+// تخمین نرمال با مشتق عددی روی SDF
 vec3 estimateNormal(vec3 pos) {
     vec3 dummyColor;
     float dummyRefl;
@@ -100,6 +105,7 @@ vec3 estimateNormal(vec3 pos) {
     return normalize(vec3(dx, dy, dz));
 }
 
+// --------- Ray Marching ----------
 vec3 rayMarch(vec3 origin, vec3 dir) {
     vec3 col = vec3(0.0);
     vec3 ro = origin;
@@ -131,16 +137,18 @@ vec3 rayMarch(vec3 origin, vec3 dir) {
         }
 
         if (!hit) {
-            col += vec3(0.02, 0.05, 0.08) * attenuation;
+            col += vec3(0.02, 0.05, 0.08) * attenuation; // پس‌زمینه
             break;
         }
 
         vec3 n = estimateNormal(hitPos);
         vec3 L = normalize(lightDir);
 
+        // diffuse + ambient
         float diff = max(dot(n, L), 0.0);
         vec3 lighting = hitColor * (0.1 + diff * lightColor);
 
+        // Phong specular
         if (phongMode == 1) {
             vec3 V = normalize(cameraPos - hitPos);
             vec3 R = reflect(-L, n);
