@@ -11,12 +11,10 @@ function loadRaytracingMaterial(camera) {
         cameraPos: { value: camera.position },
         uCamMatrix: { value: camera.matrixWorld},
         invViewProj: { value: new THREE.Matrix4()},
-        //cameraDir: { value: new THREE.Vector3(0, 0, -1) }, // Forward direction; updated in animate
         resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
 
         spheres: {
             value: [
-                // Sphere 1
                 {
                     position: new THREE.Vector3(0, 20, 0),
                     radius: 20.0,
@@ -25,7 +23,6 @@ function loadRaytracingMaterial(camera) {
                     specular: new THREE.Color(0xB4955A), 
                     shininess: 1.3
                 },
-                // Sphere 2
                 {
                     position: new THREE.Vector3(-35, 8, -20),
                     radius: 8.0,
