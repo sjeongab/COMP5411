@@ -12,23 +12,21 @@ function loadRaytracingMaterial() {
     lightDir:   { value: new THREE.Vector3(5, 10, 7).normalize() },
     lightColor: { value: new THREE.Vector3(1.0, 1.0, 1.0) },
 
-    phongMode:  { value: 1 },
-
     spheres: {
       value: [
-        { position: new THREE.Vector3(-60, 5, 0), radius: 5.0,  color: new THREE.Vector3(0.5, 1.0, 1.0), reflectivity: 0.4 },
-        { position: new THREE.Vector3(-40,10, 0), radius:10.0,  color: new THREE.Vector3(0.0, 0.5, 0.0), reflectivity: 0.3 },
-        { position: new THREE.Vector3(-10,30, 0), radius:30.0,  color: new THREE.Vector3(0.6, 0.4, 0.2), reflectivity: 0.5 },
-        { position: new THREE.Vector3(20,15, 0), radius:15.0,  color: new THREE.Vector3(1.0, 0.0, 0.0), reflectivity: 0.4 },
-        { position: new THREE.Vector3(50, 5, 0), radius:5.0,   color: new THREE.Vector3(0.5, 0.5, 0.5), reflectivity: 0.2 }
+        { position: new THREE.Vector3(-60, 5, 0), radius: 5.0,  color: new THREE.Vector3(0.5, 1.0, 1.0), reflectivity: 0.4, specular: THREE.Vector3(1.0, 1.0, 1.0), shininess: 1.3},
+        { position: new THREE.Vector3(-40,10, 0), radius:10.0,  color: new THREE.Vector3(0.8, 0.5, 0.0), reflectivity: 0.3, specular: THREE.Vector3(0.3, 0.8, 0.8), shininess: 0.0 },
+        { position: new THREE.Vector3(-10,30, 0), radius:30.0,  color: new THREE.Vector3(0.6, 0.4, 0.2), reflectivity: 0.5, specular: THREE.Vector3(0.3, 0.8, 0.8), shininess: 10.0 },
+        { position: new THREE.Vector3(20,15, 0), radius:15.0,  color: new THREE.Vector3(1.0, 0.0, 0.0), reflectivity: 0.4, specular: THREE.Vector3(0.3, 0.8, 0.8), shininess: 0.0 },
+        { position: new THREE.Vector3(50, 5, 0), radius:5.0,   color: new THREE.Vector3(0.5, 0.5, 0.5), reflectivity: 0.2, specular: THREE.Vector3(0.3, 0.8, 0.8), shininess: 10.0 }
       ]
     },
 
     boxes: {
       value: [
-        { position: new THREE.Vector3(-50, 5, 0), scale:10.0, color: new THREE.Vector3(1.0, 1.0, 0.0), reflectivity: 0.4 },
-        { position: new THREE.Vector3(30,10, 0),  scale:10.0, color: new THREE.Vector3(0.0, 0.5, 0.5), reflectivity: 0.4 },
-        { position: new THREE.Vector3(60, 5, 0),  scale:5.0,  color: new THREE.Vector3(0.5, 0.5, 0.5), reflectivity: 0.3 }
+        { position: new THREE.Vector3(-50, 5, 0), scale:10.0, color: new THREE.Vector3(1.0, 1.0, 0.0), reflectivity: 0.4, specular: THREE.Vector3(0.3, 0.8, 0.8), shininess: 0.1 },
+        { position: new THREE.Vector3(30,10, 0),  scale:10.0, color: new THREE.Vector3(0.0, 0.5, 0.5), reflectivity: 0.4, specular: THREE.Vector3(0.3, 0.8, 0.8), shininess: 0.1 },
+        { position: new THREE.Vector3(60, 5, 0),  scale:5.0,  color: new THREE.Vector3(0.5, 0.5, 0.5), reflectivity: 0.3, specular: THREE.Vector3(0.3, 0.8, 0.8), shininess: 0.1 }
       ]
     },
 
@@ -40,7 +38,9 @@ function loadRaytracingMaterial() {
           offset:       0.0,
           color:        new THREE.Vector3(0.2, 0.2, 0.2),
           reflectivity: 0.6,
-          scale:        500.0
+          scale:        500.0,
+          specular: THREE.Vector3(0.3, 0.8, 0.8), 
+          shininess: 0.0
         }
       ]
     }

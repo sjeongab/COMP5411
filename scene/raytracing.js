@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'OrbitControls';
 import {updateFPS} from '../fps.js';
 import { objects } from '../object/addObjects.js';
+import { loadRaytracingMaterial } from '../raytracing/raytracingBuffer.js';
 import { raytracingVertexShader } from '../raytracing/raytracingVertexShader.js';
 import { raytracingFragmentShader } from '../raytracing/raytracingFragmentShader.js';
 
@@ -27,12 +28,6 @@ export function init(canvas){
     cameraControls.minDistance = 10;
     cameraControls.update();
 
-    /*const sphereGeometry = new THREE.SphereGeometry(20.0, 32, 32);
-    const sphereMaterial = new THREE.MeshPhongMaterial({ color: new THREE.Color(0xFF0000), shininess: 0.5 });
-    const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-    sphere.position.set(0, 20, 0); // Position the sphere above the plane
-    scene.add(sphere);*/
-
     // Full-screen quad for ray tracing (covers the entire viewport)
     
 
@@ -53,33 +48,43 @@ export function init(canvas){
                 {
                     position: new THREE.Vector3(0, 20, 0),
                     radius: 20.0,
-                    color: new THREE.Color(0XE7C88D), // Red
-                    reflectivity: 0.6
+                    color: new THREE.Color(0XE7C88D), 
+                    reflectivity: 0.6,
+                    specular: new THREE.Color(0xB4955A), 
+                    shininess: 1.3
                 },
                 // Sphere 2
                 {
                     position: new THREE.Vector3(-35, 8, -20),
                     radius: 8.0,
-                    color: new THREE.Color(0xE7577F7), // Green
-                    reflectivity: 1.0
+                    color: new THREE.Color(0xE7577F7),
+                    reflectivity: 1.0,
+                    specular: new THREE.Color(0xB4244C4), 
+                    shininess: 0.0 
                 },
                 {
                     position: new THREE.Vector3(-20, 9.5, 40),
                     radius: 9.0,
-                    color: new THREE.Color(0xB1C193), // Green
-                    reflectivity: 0.5
+                    color: new THREE.Color(0xB1C193), 
+                    reflectivity: 0.5,
+                    specular: new THREE.Color(0xA0B082), 
+                    shininess: 5.0 
                 },
                 {
                     position: new THREE.Vector3(15, 10, 25),
                     radius:10.0,
-                    color: new THREE.Color(0xDF9D97), // Green
-                    reflectivity: 0.0
+                    color: new THREE.Color(0xDF9D97), 
+                    reflectivity: 0.0,
+                    specular: new THREE.Color(0x888888), 
+                    shininess: 0.0 
                 },
                 {
                     position: new THREE.Vector3(-44, 4, 34),
                     radius: 5.0,
-                    color: new THREE.Color(0xABD0C4), // Green
-                    reflectivity: 0.2
+                    color: new THREE.Color(0xABD0C4), 
+                    reflectivity: 0.2,
+                    specular: new THREE.Color(0x78A091), 
+                    shininess: 10.0 
                 },
             ]
         },
@@ -88,19 +93,25 @@ export function init(canvas){
                 position: new THREE.Vector3(-40, 5.1, 15),
                 scale: 10,
                 color: new THREE.Color(0XF0DD98),
-                reflectivity: 0.7
+                reflectivity: 0.7,
+                specular: new THREE.Color(0x888888), 
+                shininess: 10.0 
             },
             {
                 position: new THREE.Vector3(35, 9.5, 40.0),
                 scale: 18,
                 color: new THREE.Color(0xA5CCD6),
-                reflectivity: 0.8
+                reflectivity: 0.8,
+                specular: new THREE.Color(0x7299A3), 
+                    shininess: 3.0 
             },
             {
                 position: new THREE.Vector3(70, 9.5, 25),
                 scale: 14,
                 color: new THREE.Color(0xA3C0D3),
-                reflectivity: 0.9
+                reflectivity: 0.9,
+                specular: new THREE.Color(0x888888), 
+                shininess: 0.0 
             },
 
         ]},
@@ -112,7 +123,9 @@ export function init(canvas){
                     offset: 0.0, 
                     color: new THREE.Color(0x808080), 
                     reflectivity: 0.6, 
-                    scale: 200.0 }
+                    scale: 200.0,
+                    specular: new THREE.Color(0x888888), 
+                    shininess: 0.0 }
             ]
 
         },
@@ -128,53 +141,6 @@ export function init(canvas){
     glslVersion: THREE.GLSL3,
     side: THREE.DoubleSide
     });
-
-    /*objects.forEach((object) => {
-    if (object.type === 'plane') {
-      const planeGeometry = new THREE.PlaneGeometry(200, 200); // Width, Height
-      const planeGbufferMaterial = new THREE.ShaderMaterial({
-          uniforms: {
-              uColor: { value: object.color},
-              uReflectivity: {value: object.reflectivity}, 
-          },
-          vertexShader: rayTraceMaterial.vertexShader,
-          fragmentShader: rayTraceMaterial.fragmentShader,
-          glslVersion:THREE.GLSL3,
-      });
-      const plane = new THREE.Mesh(planeGeometry, planeGbufferMaterial);
-      plane.rotateX(-Math.PI/2);
-      scene.add(plane);
-    } else if (object.type == 'sphere'){
-      var sphereGeometry = new THREE.SphereGeometry(object.scale, 32, 16);
-        const sphereGbufferMaterial = new THREE.ShaderMaterial({
-                uniforms: {
-                    uColor: { value: object.color },
-                    uReflectivity: {value: object.reflectivity},
-                },
-                vertexShader: rayTraceMaterial.vertexShader,
-                fragmentShader: rayTraceMaterial.fragmentShader,
-                glslVersion:THREE.GLSL3,
-            });
-        var sphere = new THREE.Mesh(sphereGeometry, sphereGbufferMaterial);
-        sphere.position.set(...object.position);
-        scene.add(sphere);
-    }
-    else{
-      const cubeGeometry = new THREE.BoxGeometry(object.scale, object.scale, object.scale);
-        const cubeGbufferMaterial = new THREE.ShaderMaterial({
-                uniforms: {
-                    uColor: { value: object.color },
-                    uReflectivity: {value: object.reflectivity},
-                },
-                vertexShader: rayTraceMaterial.vertexShader,
-                fragmentShader: rayTraceMaterial.fragmentShader,
-                glslVersion:THREE.GLSL3,
-            });
-        const cube = new THREE.Mesh(cubeGeometry, cubeGbufferMaterial);
-        cube.position.set(...object.position);
-        scene.add(cube);
-    }
-    });*/
 
     // Create the quad mesh
     const quadGeometry = new THREE.PlaneGeometry(2, 2);

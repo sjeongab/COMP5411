@@ -8,13 +8,14 @@ uniform vec2 resolution;
 
 uniform vec3 lightDir;
 uniform vec3 lightColor;
-uniform int phongMode;
 
 struct Sphere {
     vec3 position;
     float radius;
     vec3 color;
     float reflectivity;
+    vec3 specular;
+    float shininess;
 };
 
 struct Box {
@@ -22,6 +23,8 @@ struct Box {
     float scale;
     vec3 color;
     float reflectivity;
+    vec3 specular;
+    float shininess;
 };
 
 struct Plane {
@@ -31,6 +34,8 @@ struct Plane {
     vec3 color;
     float reflectivity;
     float scale;
+    vec3 specular;
+    float shininess;
 };
 
 uniform Sphere spheres[5];
@@ -50,7 +55,7 @@ float sdBox(vec3 p, vec3 b) {
 }
 
 // صحنه: کمترین فاصله + رنگ/رفلکت
-float mapScene(vec3 pos, out vec3 hitColor, out float hitReflectivity) {
+float mapScene(vec3 pos, out vec3 hitColor, out float hitReflectivity, out vec3 hitSpec, out float hitShin) {
     float minDist = 1e10;
     hitColor = vec3(0.0);
     hitReflectivity = 0.0;
@@ -62,6 +67,8 @@ float mapScene(vec3 pos, out vec3 hitColor, out float hitReflectivity) {
             minDist = d;
             hitColor = spheres[i].color;
             hitReflectivity = spheres[i].reflectivity;
+            hitSpec = spheres[i].specular;
+            hitShin = spheres[i].shininess;
         }
     }
 
@@ -72,6 +79,8 @@ float mapScene(vec3 pos, out vec3 hitColor, out float hitReflectivity) {
             minDist = d;
             hitColor = boxes[i].color;
             hitReflectivity = boxes[i].reflectivity;
+            hitSpec = boxes[i].specular;
+            hitShin = boxes[i].shininess;
         }
     }
 
@@ -83,6 +92,8 @@ float mapScene(vec3 pos, out vec3 hitColor, out float hitReflectivity) {
             minDist = d;
             hitColor = planes[0].color;
             hitReflectivity = planes[0].reflectivity;
+            hitSpec = planes[0].specular;
+            hitShin = planes[0].shininess;
         }
     }
 
@@ -93,14 +104,16 @@ float mapScene(vec3 pos, out vec3 hitColor, out float hitReflectivity) {
 vec3 estimateNormal(vec3 pos) {
     vec3 dummyColor;
     float dummyRefl;
+    vec3 dummySpec;
+    float dummyShin;
     const float eps = 0.001;
 
-    float dx = mapScene(pos + vec3(eps, 0.0, 0.0), dummyColor, dummyRefl)
-             - mapScene(pos - vec3(eps, 0.0, 0.0), dummyColor, dummyRefl);
-    float dy = mapScene(pos + vec3(0.0, eps, 0.0), dummyColor, dummyRefl)
-             - mapScene(pos - vec3(0.0, eps, 0.0), dummyColor, dummyRefl);
-    float dz = mapScene(pos + vec3(0.0, 0.0, eps), dummyColor, dummyRefl)
-             - mapScene(pos - vec3(0.0, 0.0, eps), dummyColor, dummyRefl);
+    float dx = mapScene(pos + vec3(eps, 0.0, 0.0), dummyColor, dummyRefl, dummySpec, dummyShin)
+             - mapScene(pos - vec3(eps, 0.0, 0.0), dummyColor, dummyRefl, dummySpec, dummyShin);
+    float dy = mapScene(pos + vec3(0.0, eps, 0.0), dummyColor, dummyRefl, dummySpec, dummyShin)
+             - mapScene(pos - vec3(0.0, eps, 0.0), dummyColor, dummyRefl, dummySpec, dummyShin);
+    float dz = mapScene(pos + vec3(0.0, 0.0, eps), dummyColor, dummyRefl, dummySpec, dummyShin)
+             - mapScene(pos - vec3(0.0, 0.0, eps), dummyColor, dummyRefl, dummySpec, dummyShin);
 
     return normalize(vec3(dx, dy, dz));
 }
@@ -123,10 +136,12 @@ vec3 rayMarch(vec3 origin, vec3 dir) {
         vec3 hitPos = vec3(0.0);
         vec3 hitColor = vec3(0.0);
         float hitRefl = 0.0;
+        vec3 hitSpec = vec3(0.0);
+        float hitShin = 0.0;
 
         for (int i = 0; i < MAX_STEPS; i++) {
             vec3 p = ro + rd * t;
-            float d = mapScene(p, hitColor, hitRefl);
+            float d = mapScene(p, hitColor, hitRefl, hitSpec, hitShin);
             if (d < SURF_EPS) {
                 hit = true;
                 hitPos = p;
@@ -137,7 +152,7 @@ vec3 rayMarch(vec3 origin, vec3 dir) {
         }
 
         if (!hit) {
-            col += vec3(0.02, 0.05, 0.08) * attenuation; // پس‌زمینه
+            col += vec3(0.25098, 0.25098, 0.25098) * attenuation; // پس‌زمینه
             break;
         }
 
@@ -148,16 +163,14 @@ vec3 rayMarch(vec3 origin, vec3 dir) {
         float diff = max(dot(n, L), 0.0);
         vec3 lighting = hitColor * (0.1 + diff * lightColor);
 
-        // Phong specular
-        if (phongMode == 1) {
+        if(hitShin > 0.0){
             vec3 V = normalize(cameraPos - hitPos);
             vec3 R = reflect(-L, n);
-            float spec = pow(max(dot(V, R), 0.0), 32.0);
-            lighting += lightColor * spec * 1.5;
+            float spec = pow(max(dot(R, V), 0.0), hitShin);
+            lighting += hitSpec * spec;   
         }
 
         col += lighting * attenuation * (1.0 - hitRefl);
-
         if (hitRefl <= 0.05) break;
 
         ro = hitPos + n * 0.01;
