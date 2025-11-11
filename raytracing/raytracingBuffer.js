@@ -70,7 +70,7 @@ function loadRaytracingMaterial(camera) {
                 position: new THREE.Vector3(35, 9.5, 40.0),
                 scale: 18,
                 color: new THREE.Color(0xA5CCD6),
-                reflectivity: 0.0,
+                reflectivity: 0.1,
                 specular: new THREE.Color(0x7299A3), 
                 shininess: 3.0 
             },
@@ -78,7 +78,7 @@ function loadRaytracingMaterial(camera) {
                 position: new THREE.Vector3(70, 9.5, 25),
                 scale: 14,
                 color: new THREE.Color(0xA3C0D3),
-                reflectivity: 0.9,
+                reflectivity: 0.0,
                 specular: new THREE.Color(0x92B0C2), 
                 shininess: 1.6
             },

@@ -79,7 +79,7 @@ function loadHybridMaterial(camera) {
                 position: new THREE.Vector3(35, 9.5, 40.0),
                 scale: 18,
                 color: new THREE.Color(0xA5CCD6),
-                reflectivity: 0.8,
+                reflectivity: 0.1,
                 specular: new THREE.Color(0x7299A3), 
                 shininess: 3.0 
             },

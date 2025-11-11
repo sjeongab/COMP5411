@@ -131,7 +131,7 @@ const hybridFragmentShader = `
             vec3 rayOrigin = origin;
             vec3 rayDir = direction;
             float attenuation = 1.0;
-            const int maxBounces = 10;
+            const int maxBounces = 3;
 
             for(int bounce = 0; bounce < maxBounces; bounce++){
                 float t = 0.0;
@@ -157,24 +157,23 @@ const hybridFragmentShader = `
                     break;
                 }
 
+                vec3 L = normalize(lightDir);
                 vec3 normal = estimateNormal(hitPos);
-                float diff = max(dot(normal, lightDir), 0.0);
+                float diff = max(dot(normal, L), 0.0);
                 vec3 lighting = hitColor * (0.1 + diff * lightColor); // Ambient
                 
                 if(hitShin > 0.0){
-                    vec3 L = normalize(lightDir);
                     vec3 V = normalize(cameraPos - hitPos);
                     vec3 R = reflect(-L, normal);
                     float spec = pow(max(dot(R, V), 0.0), hitShin);
-                    lighting += hitSpec * spec;
-                    //lighting += hitSpec * 2.0;   
+                    lighting += hitSpec * spec;  
                 }
                 // Add to final color
                 finalColor += lighting * attenuation * (1.0 - hitRefl);
 
                 
                 // If not reflective, stop
-                if (hitRefl <= 0.05) break;
+                if (hitRefl < 0.1) break;
                 
                 // Prepare next reflection bounce
                 rayDir = reflect(rayDir, normal);
