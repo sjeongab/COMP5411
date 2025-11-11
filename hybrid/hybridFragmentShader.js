@@ -7,6 +7,7 @@ const hybridFragmentShader = `
         uniform sampler2D gNormal;
         uniform sampler2D gPosition;
         uniform sampler2D gReflection;
+        uniform sampler2D gDepth;
         uniform vec2 resolution;
 
         uniform vec3 lightDir;
@@ -54,7 +55,7 @@ const hybridFragmentShader = `
         out vec4 FragColor;
 
         float intersectSphere(vec3 pos, vec3 center, float radius) {
-        return length(pos - center) - radius;
+            return length(pos - center) - radius;
         }
 
         float intersectBox(vec3 pos, vec3 center, float scale) {
@@ -163,6 +164,7 @@ const hybridFragmentShader = `
 
     void main() {
         vec2 uv = (gl_FragCoord.xy / resolution) * 2.0 - 1.0;
+        vec2 suv = gl_FragCoord.xy / resolution;
         vec4 rayClip = vec4(uv, -1.0, 1.0);
         vec4 rayEye = invViewProj * rayClip;
         rayEye.xyz /= rayEye.w;
@@ -170,16 +172,17 @@ const hybridFragmentShader = `
         vec3 rayDir = normalize((uCamMatrix * vec4(rayEye.xyz, 0.0)).xyz);
 
         vec3 result = rayMarch(cameraPos, rayDir);
+        
+
+        float depth = texture2D(gDepth, suv).r;
+        float reflectivity = texture2D(gReflection, suv).r;
+        if (depth >= 0.9999 || reflectivity <= 0.8){
+            vec3 albedo = texture2D(gColor, suv).rgb;
+            FragColor = vec4(albedo, 1.0);
+            return;
+        }
 
         FragColor = vec4(result, 1.0);
-        /*vec2 uv = gl_FragCoord.xy / resolution;
-        vec3 albedo = texture(gColor, uv).rgb;
-        vec3 normal = texture(gNormal, uv).xyz;
-        vec3 position = texture(gPosition, uv).xyz;
-
-        FragColor = vec4(albedo, 1.0);
-
-        return;*/
     }
 `;
 

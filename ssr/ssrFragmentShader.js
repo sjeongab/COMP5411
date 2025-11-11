@@ -73,23 +73,6 @@ const ssrFragmentShader = `
 			return xy;
 		}
 
-        vec3 computePhong(vec3 albedo, vec3 normal, vec3 position, vec3 viewDir) {
-            vec3 lightPos = vec3(0, 100, 100);
-            vec3 lightColor = vec3(1.5, 1.5, 1.5);
-            float shininess = 64.0;
-
-            vec3 lightDir = normalize(lightPos - position);
-            vec3 reflectDir = reflect(-lightDir, normal);
-
-            vec3 ambient = 0.2 * lightColor;
-            float diff = max(dot(normal, lightDir), 0.0);
-            vec3 diffuse = diff * lightColor;
-            float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-            vec3 specular = spec * lightColor;
-
-            return (ambient + diffuse + specular) * albedo;
-        }
-
         void main() {
         
             vec2 uv = gl_FragCoord.xy / resolution;
@@ -121,7 +104,6 @@ const ssrFragmentShader = `
             }
 
             if (reflectivity < 0.01 ) { 
-                //objectColor = computePhong(albedo, worldNormal, position, viewDir);
                 objectColor = albedo;
 
                 FragColor = vec4(objectColor, alpha);
@@ -191,7 +173,6 @@ const ssrFragmentShader = `
                         //if (hitPosition.y < 0.1) continue;  // حذف رفلکت سطح روی اشیا
                         vec3 hitWorldNormal = normalize( ( inverseViewMatrix * vec4( vN, 0.0 ) ).xyz );
                         vec3 hitViewDir = normalize(cameraWorldPosition - hitPosition);
-                        //objectColor = computePhong(reflectColor, worldNormal, hitPosition, hitViewDir);
                         objectColor = reflectColor;
                         //objectColor=albedo;
  

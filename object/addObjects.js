@@ -16,7 +16,6 @@ const objects = [
     { type: 'sphere', position: [15.0, 10, 25], scale: 10, rotationSpeed: 0.9, color: new THREE.Color(0xDF9D97), reflectivity: 1.0, specular: new THREE.Color(0x888888), shininess: 0.0 },
     { type: 'cube', position: [70, 9.5, 25], scale: 14, rotationSpeed: 0, color: new THREE.Color(0xA3C0D3), reflectivity: 1.0, specular: new THREE.Color(0xffffff), shininess: 2.0, },
     { type: 'sphere', position: [-55, 5, 45], scale: 5, rotationSpeed: 1.5, color: new THREE.Color(0xABD0C4), reflectivity: 1.0, specular: new THREE.Color(0x78A091), shininess: 10.0,},
-    //{ type: 'sphere', position: [0, 100, 100], scale: 0.5, rotationSpeed: 0, color: new THREE.Color(0xFFFFFF), reflectivity: 0.5, specular: 0x888888, shininess: 0 }, //light source
 ];
 
 
@@ -36,7 +35,6 @@ function addPlainObjects(scene) {
       scene.add(sphere);
     }
     else{
-      console.log(object.shininess);
       const cubeGeometry = new THREE.BoxGeometry(object.scale, object.scale, object.scale);
       const cubeMaterial = new THREE.MeshPhongMaterial({ color: object.color, specular: object.specular, shininess: object.shininess});
       const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);

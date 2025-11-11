@@ -43,16 +43,10 @@ export function init(canvas) {
     reflectedCamera.position.copy(camera.position);
     reflectedCamera.position.y = -camera.position.y; // Reflect over y=0
     
-    // Reflect the target (if it's not on the plane; here (0,0,0) is on the plane, so it stays the same)
-    //const reflectedTarget = cameraControls.target.clone();
-    //reflectedTarget.y = -reflectedTarget.y; // But since y=0, it remains (0,0,0)
-    
     // For correct mirror orientation, reflect the up vector (invert y-component)
     reflectedCamera.up.copy(camera.up);
     reflectedCamera.up.y = -reflectedCamera.up.y; // Typically from (0,1,0) to (0,-1,0)
     
-    // Make the reflected camera look at the reflected target
-    //reflectedCamera.lookAt(reflectedTarget);
     
     // Get the reflected view matrix (inverse of the world matrix)
     reflectedCamera.updateMatrixWorld(); // Ensure matrices are updated
@@ -88,32 +82,24 @@ export function init(canvas) {
         gNormal: { value: gBuffer.textures[1] },
         gPosition: { value: gBuffer.textures[2] },
         gReflection: { value: gBuffer.textures[3] },
-        //gDepth: { value: gBuffer.depthTexture },
+        gDepth: { value: gBuffer.depthTexture },
         resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-        //projectionMatrix: { value: ssrCamera.projectionMatrix },
-        //inverseProjectionMatrix: { value: new THREE.Matrix4() },
-        //inverseViewMatrix: { value: new THREE.Matrix4() },
-        //reflectionMatrix: {value: reflectionMatrix},
+
         cameraPos: { value: camera.position},
         uCamMatrix: { value: camera.matrixWorld},
         invViewProj: {value: new THREE.Matrix4()},
-        //cameraWorldPosition: { value: ssrCamera.position },
-        //cameraNear: { value: ssrCamera.near },
-        //cameraFar: { value: ssrCamera.far },
         spheres: {
                     value: [
-                        // Sphere 1
                         {
                             position: new THREE.Vector3(0, 20, 0),
                             radius: 20.0,
-                            color: new THREE.Color(0XE7C88D), // Red
+                            color: new THREE.Color(0XE7C88D),
                             reflectivity: 0.6
                         },
-                        // Sphere 2
                         {
                             position: new THREE.Vector3(-35, 8, -20),
                             radius: 8.0,
-                            color: new THREE.Color(0xE7577F7), // Green
+                            color: new THREE.Color(0xE7577F7),
                             reflectivity: 1.0
                         },
                         {
@@ -125,7 +111,7 @@ export function init(canvas) {
                         {
                             position: new THREE.Vector3(15, 10, 25),
                             radius:10.0,
-                            color: new THREE.Color(0xDF9D97), // Green
+                            color: new THREE.Color(0xDF9D97),
                             reflectivity: 0.0
                         },
                         {
