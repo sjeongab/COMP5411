@@ -1,4 +1,3 @@
-// ssrFragmentShader.js
 const ssrFragmentShader = `
         #include <packing>
 
@@ -10,208 +9,205 @@ const ssrFragmentShader = `
         uniform sampler2D gReflection;
         uniform sampler2D gDepth;
         uniform vec2 resolution;
-        uniform samplerCube gBackground;
 
-        uniform mat4 projectionMatrix;
-        uniform mat4 inverseProjectionMatrix;
-        uniform mat4 inverseViewMatrix;
-        uniform vec3 cameraWorldPosition;
-        uniform float cameraNear;
-        uniform float cameraFar;
+        uniform vec3 lightDir;
+        uniform vec3 lightColor;
+
+        uniform vec3 cameraPos;
+        uniform mat4 invViewProj; // Inverse view-projection matrix for ray direction
+
+        uniform mat4  uCamMatrix;
+        uniform mat4  uCamPos;
+        uniform mat4  uInvProj;
+
+        struct Ray {
+            vec3 origin;
+            vec3 dir;
+        };
+        
+        struct Sphere {
+            vec3 position;
+            float radius;
+            vec3 color;
+            float reflectivity;
+            vec3 specular;
+            float shininess;
+        };
+
+        struct Box {
+            vec3 position;
+            float scale;
+            vec3 color;
+            float reflectivity;
+            vec3 specular;
+            float shininess;
+        };
+
+        struct Plane{
+            vec3 position;
+            vec3 normal;
+            float offset;
+            vec3 color;
+            float reflectivity;
+            float scale;
+            vec3 specular;
+            float shininess;
+        };
+
+        uniform Sphere spheres[5];
+        uniform Box boxes[3];
+        uniform Plane planes[1];
 
         out vec4 FragColor;
 
-        
-
-        float pointToLineDistance(vec3 x0, vec3 x1, vec3 x2) {
-			//x0: point, x1: linePointA, x2: linePointB
-			//https://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
-			return length(cross(x0-x1,x0-x2))/length(x2-x1);
-		}
-		float pointPlaneDistance(vec3 point,vec3 planePoint,vec3 planeNormal){
-			// https://mathworld.wolfram.com/Point-PlaneDistance.html
-			//// https://en.wikipedia.org/wiki/Plane_(geometry)
-			//// http://paulbourke.net/geometry/pointlineplane/
-			float a=planeNormal.x,b=planeNormal.y,c=planeNormal.z;
-			float x0=point.x,y0=point.y,z0=point.z;
-			float x=planePoint.x,y=planePoint.y,z=planePoint.z;
-			float d=-(a*x+b*y+c*z);
-			float distance=(a*x0+b*y0+c*z0+d)/sqrt(a*a+b*b+c*c);
-			return distance;
-		}
-
-        float getDepth( const in vec2 uv ) {
-			return texture2D( gDepth, uv ).r;
-		}
-		float getViewZ( const in float depth ) {
-			return ( cameraNear * cameraFar ) / ( ( cameraNear - cameraFar ) * depth + cameraFar );
-		}
-
-        float linearDepth(float depthSample) {
-            float z = depthSample * 2.0 - 1.0;
-            float d =  (cameraNear * cameraFar ) / (cameraFar + cameraNear - z * (cameraFar));
-            return (d - cameraNear) / (cameraFar - cameraNear);
+        float intersectSphere(vec3 pos, vec3 center, float radius) {
+            return length(pos - center) - radius;
         }
 
-        vec3 getViewPosition( const in vec2 uv, const in float depth/*clip space*/, const in float clipW ) {
-			vec4 clipPosition = vec4( ( vec3( uv, depth ) - 0.5 ) * 2.0, 1.0 );//ndc
-			clipPosition *= clipW; //clip
-			return ( inverseProjectionMatrix * clipPosition ).xyz;//view
-		}
-		vec3 getViewNormal( const in vec2 uv ) {
-			return unpackRGBToNormal( texture2D( gNormal, uv ).xyz );
-		}
-
-        vec2 viewPositionToXY(vec3 viewPosition){
-			vec2 xy;
-			vec4 clip=projectionMatrix*vec4(viewPosition,1);
-			xy=clip.xy;//clip
-			float clipW=clip.w;
-			xy/=clipW;//NDC
-			xy=(xy+1.)/2.;//uv
-			xy*=resolution;//screen
-			return xy;
-		}
-
-        vec3 computePhong(vec3 albedo, vec3 normal, vec3 position, vec3 viewDir) {
-            vec3 lightPos = vec3(0, 100, 100);
-            vec3 lightColor = vec3(1.5, 1.5, 1.5);
-            float shininess = 64.0;
-
-            vec3 lightDir = normalize(lightPos - position);
-            vec3 reflectDir = reflect(-lightDir, normal);
-
-            vec3 ambient = 0.2 * lightColor;
-            float diff = max(dot(normal, lightDir), 0.0);
-            vec3 diffuse = diff * lightColor;
-            float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-            vec3 specular = spec * lightColor;
-
-            return (ambient + diffuse + specular) * albedo;
+        float intersectBox(vec3 pos, vec3 center, float scale) {
+            vec3 dist = abs(pos - center) - scale/2.0;
+            return length(max(dist, 0.0)) + min(max(dist.x, max(dist.y, dist.z)), 0.0);
         }
 
-        void main() {
-        
-            vec2 uv = gl_FragCoord.xy / resolution;
-            vec3 albedo = texture(gColor, uv).rgb;
-            vec3 normal = texture(gNormal, uv).xyz;
-            vec3 position = texture(gPosition, uv).xyz;
-            float reflectivity = texture(gReflection, uv).r;
-            float depth = texture(gDepth, uv).r;
-            float viewZ = getViewZ( depth );
-            float linearDepthSample = linearDepth(depth);
-            float thickness = 0.018;
-            vec3 objectColor;
-            float clipW = projectionMatrix[2][3] * viewZ+projectionMatrix[3][3];
-            vec3 viewPosition=getViewPosition( uv, depth, clipW );
-            vec3 worldNormal = normalize( ( inverseViewMatrix * vec4( normal, 0.0 ) ).xyz );
-            vec3 viewDir = normalize(cameraWorldPosition - position);
-            bool coloured = false;
-            float alpha = 1.0;
+        float intersectPlane(vec3 pos, vec3 center, float scale) {
+            vec3 dist = abs(pos - center) - vec3(scale/2.0, 0.01, scale/2.0);
+            return length(max(dist, 0.0)) + min(max(dist.x, max(dist.y, dist.z)), 0.0);
+        }
 
-            if (depth >= 0.9999) {
-                FragColor = vec4(0.0, 0.0, 0.0, 0.0);
-                return;
+        float intersect(vec3 pos, out vec3 hitColor, out float hitReflectivity, out vec3 hitSpec, out float hitShin) {
+            float minDist = 1e10;
+            hitColor = vec3(0.0);
+            hitReflectivity = 0.0;
+
+            for (int i = 0; i < 5; i++) {
+                float d = intersectSphere(pos, spheres[i].position, spheres[i].radius);
+                if (d < minDist){
+                    minDist = d;
+                    hitColor = spheres[i].color;
+                    hitReflectivity = spheres[i].reflectivity;
+                    hitSpec = spheres[i].specular;
+                    hitShin = spheres[i].shininess;
+                }
             }
-
-
-            if(-viewZ > cameraFar) {
-                FragColor = vec4(0.0, 0.0, 0.0, 0.0);
-                return;
-            }
-
-            if (reflectivity < 0.01 ) { 
-                //objectColor = computePhong(albedo, worldNormal, position, viewDir);
-                objectColor = albedo;
-
-                FragColor = vec4(objectColor, alpha);
-                return;
-            }
-
-            vec2 d0 = gl_FragCoord.xy;
-            vec2 d1;
-
-            vec3 viewNormal = getViewNormal( uv );
-
-            vec3 viewIncidentDir = vec3(0,0,-1);
-            vec3 viewReflectDir = reflect(viewIncidentDir, viewNormal);
-
-            float maxDistance = 1500.0;
-            float denom = max(dot(-viewIncidentDir, viewNormal), 0.30);
-            float maxReflectRayLen = min(maxDistance / denom, maxDistance);
-
-            vec3 d1viewPosition = viewPosition + viewReflectDir * maxReflectRayLen;
-            d1 = viewPositionToXY(d1viewPosition);
-
-            float totalLen = length(d1 - d0);
-            float xLen = d1.x - d0.x;
-            float yLen = d1.y - d0.y;
-            float totalStep = max(abs(xLen), abs(yLen));
-            float xSpan = xLen / totalStep;
-            float ySpan = yLen / totalStep;
-
-            int MAX_STEP = 1000;
-
-            for(float i = 0.; i < float(MAX_STEP); i++){
-                if(i >= totalStep) break;
-                vec2 xy = vec2(d0.x + i * xSpan, d0.y + i * ySpan);
-                float s = length(xy - d0) / totalLen;
-                vec2 uvS = xy / resolution;
-
-                float d = getDepth(uvS);
-                float vZ = getViewZ( d );
-                if(-vZ >= cameraFar) continue;
-                float cW = projectionMatrix[2][3] * vZ + projectionMatrix[3][3];
-                vec3 vP = getViewPosition( uvS, d, cW );
-
-                float viewReflectRayZ = viewPosition.z + s * (d1viewPosition.z - viewPosition.z);
-                if(viewReflectRayZ <= vZ){
-                    bool hit;
-
-                    float away = pointToLineDistance(vP, viewPosition, d1viewPosition);
-
-                    float minThickness;
-                    vec2 xyNeighbor = xy;
-                    xyNeighbor.x += 1.;
-                    vec2 uvNeighbor = xyNeighbor / resolution;
-                    vec3 vPNeighbor = getViewPosition(uvNeighbor, d, cW);
-                    minThickness = vPNeighbor.x - vP.x;
-                    minThickness *= 3.;
-                    float tk = max(minThickness, thickness);
-
-                    hit = away <= tk;
-
-                    if (hit){
-                        vec3 vN = getViewNormal( uvS );
-                        if(dot(viewReflectDir, vN) >= 0.) continue;
-                        float distance = pointPlaneDistance(vP, viewPosition, viewNormal);
-                        if(distance > maxDistance) break;
-                        vec3 reflectColor = texture2D(gColor, uvS).rgb;
-                        vec3 hitPosition = texture(gPosition, uvS).xyz;
-                        //if (hitPosition.y < 0.1) continue;  // حذف رفلکت سطح روی اشیا
-                        vec3 hitWorldNormal = normalize( ( inverseViewMatrix * vec4( vN, 0.0 ) ).xyz );
-                        vec3 hitViewDir = normalize(cameraWorldPosition - hitPosition);
-                        //objectColor = computePhong(reflectColor, worldNormal, hitPosition, hitViewDir);
-                        objectColor = reflectColor;
-                        //objectColor=albedo;
- 
-                        coloured = true;
-                        break;
-                    }  
+            for (int i=0; i < 3; i++){
+                float d = intersectBox(pos, boxes[i].position, boxes[i].scale);
+                if (d < minDist){
+                    minDist = d;
+                    hitColor = boxes[i].color;
+                    hitReflectivity = boxes[i].reflectivity;
+                    hitSpec = boxes[i].specular;
+                    hitShin = boxes[i].shininess;
                 }
             }
 
-            if(!coloured){
-                //objectColor = computePhong(albedo, worldNormal, position, viewDir);
-                objectColor = albedo;
+            float d = intersectPlane(pos, planes[0].position, planes[0].scale);
+            if (d < minDist){
+                minDist = d;
+                hitColor = planes[0].color;
+                hitReflectivity = planes[0].reflectivity;
+                hitSpec = planes[0].specular;
+                hitShin = planes[0].shininess;
             }
 
-            float edge = min(min(uv.x, uv.y), min(1.0 - uv.x, 1.0 - uv.y));
-            float edgeFade = smoothstep(0.005, 0.15, edge);
-            vec3 fadedColor = mix(albedo, objectColor, reflectivity * edgeFade);
-            FragColor = vec4(fadedColor, alpha);
+            return minDist;
+        }
+
+        vec3 estimateNormal(vec3 pos){
+            vec3 dummyColor;
+            float dummyRefl;
+            vec3 dummyNorm;
+            vec3 dummySpec;
+            float dummyShin;
+            const float eps = 0.01;
+            return normalize(vec3(
+            intersect(pos + vec3(eps, 0.0, 0.0), dummyColor, dummyRefl, dummySpec, dummyShin) - intersect(pos - vec3(eps, 0.0, 0.0), dummyColor, dummyRefl, dummySpec, dummyShin),
+            intersect(pos + vec3(0.0, eps, 0.0), dummyColor, dummyRefl, dummySpec, dummyShin) - intersect(pos - vec3(0.0, eps, 0.0), dummyColor, dummyRefl, dummySpec, dummyShin),
+            intersect(pos + vec3(0.0, 0.0, eps), dummyColor, dummyRefl, dummySpec, dummyShin) - intersect(pos - vec3(0.0, 0.0, eps), dummyColor, dummyRefl, dummySpec, dummyShin)
+            ));
+        }
+
+        vec3 rayMarch(vec3 origin, vec3 direction) {
+            vec3 finalColor = vec3(0.0);
+            vec3 rayOrigin = origin;
+            vec3 rayDir = direction;
+            float attenuation = 1.0;
+            const int maxBounces = 3;
+
+            for(int bounce = 0; bounce < maxBounces; bounce++){
+                float t = 0.0;
+                bool hit = false;
+                vec3 hitPos = vec3(0.0);
+                vec3 hitColor = vec3(0.0);
+                float hitRefl = 0.0;
+                vec3 hitSpec = vec3(0.0);
+                float hitShin = 0.0;
+                for (int i = 0; i < 128; i++){
+                    vec3 pos = rayOrigin + t * rayDir;
+                    float d = intersect(pos, hitColor, hitRefl, hitSpec, hitShin);
+                    if (d < 0.001){
+                        hitPos = pos;
+                        hit = true;
+                        break;
+                    }
+                    t += d;
+                    if (t > 500.0) break;
+                }
+                if (!hit){
+                    finalColor += vec3(0.25098, 0.25098, 0.25098) * attenuation;
+                    break;
+                }
+
+                vec3 L = normalize(lightDir);
+                vec3 normal = estimateNormal(hitPos);
+                float diff = max(dot(normal, L), 0.0);
+                vec3 lighting = hitColor * (0.1 + diff * lightColor); // Ambient
+                
+                if(hitShin > 0.0){
+                    vec3 V = normalize(cameraPos - hitPos);
+                    vec3 R = reflect(-L, normal);
+                    float spec = pow(max(dot(R, V), 0.0), hitShin);
+                    lighting += hitSpec * spec;  
+                }
+                // Add to final color
+                finalColor += lighting * attenuation * (1.0 - hitRefl);
+
+                
+                // If not reflective, stop
+                if (hitRefl < 0.1) break;
+                
+                // Prepare next reflection bounce
+                rayDir = reflect(rayDir, normal);
+                rayOrigin = hitPos + normal * 0.01; // Offset
+                attenuation *= hitRefl; // Attenuate by reflectivity
+                
+            }
+        return finalColor;
+    }
+
+
+    void main() {
+        vec2 uv = (gl_FragCoord.xy / resolution) * 2.0 - 1.0;
+        vec2 suv = gl_FragCoord.xy / resolution;
+        vec4 rayClip = vec4(uv, -1.0, 1.0);
+        vec4 rayEye = invViewProj * rayClip;
+        rayEye.xyz /= rayEye.w;
+        rayEye = vec4(rayEye.xy, -1.0, 0.0);
+        vec3 rayDir = normalize((uCamMatrix * vec4(rayEye.xyz, 0.0)).xyz);
+
+        vec3 result = rayMarch(cameraPos, rayDir);
+        
+
+        float depth = texture2D(gDepth, suv).r;
+        float reflectivity = texture2D(gReflection, suv).r;
+        if (depth >= 0.9999 || reflectivity < 0.5){
+            vec3 albedo = texture2D(gColor, suv).rgb;
+            FragColor = vec4(albedo, 1.0);
             return;
         }
-    `;
+         vec3 alb = texture2D(gColor, suv).rgb;
+        FragColor = vec4(result, 1.0);
+        FragColor = vec4(alb, 1.0); 
+    }
+`;
 
 export {ssrFragmentShader};

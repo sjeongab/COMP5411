@@ -47,7 +47,7 @@ export function init(canvas) {
     directionalLight.position.set(5, 10, 7);
     scene.add(directionalLight);
     
-    const ssrMaterial = loadSSRMaterial(ssrCamera);
+    const ssrMaterial = loadSSRMaterial(camera);
     const postProcessQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ssrMaterial);   
     ssrScene.add(postProcessQuad);
 
@@ -59,9 +59,11 @@ export function init(canvas) {
       updateFPS(currentTime);
       cameraControls.update();
 
-      ssrMaterial.uniforms.inverseProjectionMatrix.value.copy(ssrCamera.projectionMatrix).invert();
-      ssrMaterial.uniforms.inverseViewMatrix.value.copy(ssrCamera.matrixWorldInverse).invert();
-      ssrMaterial.uniforms.cameraWorldPosition.value.copy(ssrCamera.position);
+      ssrMaterial.uniforms.uCamMatrix.value.copy(camera.matrixWorld);
+      ssrMaterial.uniforms.invViewProj.value.copy(camera.projectionMatrix).invert();
+      ssrMaterial.uniforms.inverseProjectionMatrix.value.copy(camera.projectionMatrix).invert();
+      ssrMaterial.uniforms.inverseViewMatrix.value.copy(camera.matrixWorldInverse).invert();
+      ssrMaterial.uniforms.cameraPos.value.copy(camera.position);
 
       renderer.setRenderTarget(gBuffer);
       renderer.clear(true, true, true);
@@ -71,7 +73,7 @@ export function init(canvas) {
       renderer.setRenderTarget(null);
       renderer.clear(true, true, true);
       renderer.render(scene, camera);
-      renderer.render(ssrScene, ssrCamera);
+      renderer.render(ssrScene, camera);
 
       // Request the next animation frame
       requestAnimationFrame(animate);
