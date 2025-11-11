@@ -122,11 +122,6 @@ vec3 traceReflection(vec3 origin, vec3 dir) {
     float diff = max(dot(n, L), 0.0);
     vec3 col = hitColor * (0.1 + diff * lightColor);
 
-    // A bit of specular for appeal
-    vec3 V = normalize(cameraPos - hitPos);
-    vec3 R = reflect(-L, n);
-    float spec = pow(max(dot(V, R), 0.0), 32.0);
-    col += lightColor * spec * 0.5;
 
     return col;
 }
@@ -145,9 +140,9 @@ void main() {
 
     // Simple diffuse for the plane itself
     float diff = max(dot(N, normalize(lightDir)), 0.0);
-    vec3 base = planeColor * (0.1 + diff * lightColor);
+    vec3 base = planeColor * (0.1 + diff * lightColor) + vec3(0.25098, 0.25098, 0.25098);
 
-    vec3 finalColor = mix(base, reflColor, planeReflectivity);
+    vec3 finalColor = base*(1.0-planeReflectivity)+reflColor*planeReflectivity;
 
     FragColor = vec4(finalColor, 1.0);
 }

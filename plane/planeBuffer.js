@@ -35,10 +35,10 @@ function createReflectivePlane(scene) {  // Pass the scene as a parameter now
 
   const uniforms = {
     cameraPos: { value: new THREE.Vector3(0, 75, 160) },
-    lightDir: { value: new THREE.Vector3(5, 10, 7).normalize() },
+    lightDir: { value: new THREE.Vector3(0.5, 0.7, 0.5).normalize()},
     lightColor: { value: new THREE.Vector3(1.0, 1.0, 1.0) },
-    planeColor: { value: new THREE.Vector3(0.2, 0.2, 0.2) },
-    planeReflectivity: { value: 0.2 },
+    planeColor: { value: new THREE.Vector3(0.5020, 0.5020, 0.5020) },
+    planeReflectivity: { value: 0.7 },
     spheres: { value: spheres.slice(0, 5) },  // Take first 5; adjust if more
     boxes: { value: boxes.slice(0, 3) },     // Take first 3; adjust if more
     gColor: { value: gBuffer.textures[0] },
