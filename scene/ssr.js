@@ -5,9 +5,11 @@ import {addSSRObjects} from '../object/addObjects.js'
 import { addSkyBox } from '../object/addSkyBox.js'
 import {loadSSRMaterial} from '../ssr/ssrBuffer.js'
 import {gBuffer} from '../gBuffer/gBuffer.js'
+import { createReflectivePlane } from '../plane/planeBuffer.js';
 
 let scene, camera, renderer;
 let isRunning = true;
+let reflectivePlaneMaterial = null;
 
 // Function to initialize the Three.js scene
 export function init(canvas) {
@@ -52,6 +54,23 @@ export function init(canvas) {
     ssrScene.add(postProcessQuad);
 
     // Add Planar Reflection here (add buffer, shaders too)
+      // If addPlainObjects adds a regular plane, hide it
+      scene.traverse((obj) => {
+        if (
+          obj.isMesh &&
+          obj.geometry &&
+          obj.geometry.type === 'PlaneGeometry'
+        ) {
+          obj.visible = false;
+        }
+      });
+    
+      // Reflective plane with custom raymarch shader
+      const { mesh: reflectivePlane, material } = createReflectivePlane(scene);
+      // Raise it a bit to avoid depth conflict with anything
+      reflectivePlane.position.y += 0.001;
+      scene.add(reflectivePlane);
+      reflectivePlaneMaterial = material;
 
     // Start the animation loop
     function animate(currentTime)  {
@@ -64,6 +83,23 @@ export function init(canvas) {
       ssrMaterial.uniforms.inverseProjectionMatrix.value.copy(camera.projectionMatrix).invert();
       ssrMaterial.uniforms.inverseViewMatrix.value.copy(camera.matrixWorldInverse).invert();
       ssrMaterial.uniforms.cameraPos.value.copy(camera.position);
+
+      // Update shader uniforms for plane
+    if (reflectivePlaneMaterial && reflectivePlaneMaterial.uniforms) {
+      if (reflectivePlaneMaterial.uniforms.cameraPos) {
+        reflectivePlaneMaterial.uniforms.cameraPos.value.copy(camera.position);
+        const viewMatrix = camera.matrixWorldInverse;
+        const viewProj = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, viewMatrix);
+        reflectivePlaneMaterial.uniforms.uViewProjectionMatrix.value.copy(viewProj);
+        //console.log(camera.projectionMatrix);
+      }
+      if (reflectivePlaneMaterial.uniforms.lightDir) {
+        // If light is static, this is enough
+        reflectivePlaneMaterial.uniforms.lightDir.value
+          .set(5, 10, 7)
+          .normalize();
+      }
+    }
 
       renderer.setRenderTarget(gBuffer);
       renderer.clear(true, true, true);
@@ -87,4 +123,5 @@ export function stop() {
     document.body.removeChild(document.body.lastElementChild);
     renderer.dispose();
     isRunning = false;
+    reflectivePlaneMaterial = null;
 }
