@@ -7,8 +7,8 @@
 **TO DO**
 * Refine gbuffer fragment shader
 * Update reflectivity
-* Hybrid - Ray tracing + discard if no reflectivity or out of depth
-* SSR - Ray tracing + reusing gBuffer for colouring with depth check 
+* SSR - Ray tracing + reusing gBuffer for colouring with depth check
+* Add skybox 
 
 **Useful Links**
 https://github.com/Domenicobrz/WebGL2-Screen-space-reflections/tree/master
