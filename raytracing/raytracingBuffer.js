@@ -48,7 +48,7 @@ function loadRaytracingMaterial(camera) {
                     shininess: 0.0 
                 },
                 {
-                    position: new THREE.Vector3(-44, 4, 34),
+                    position: new THREE.Vector3(-55, 5, 45),
                     radius: 5.0,
                     color: new THREE.Color(0xABD0C4), 
                     reflectivity: 0.2,
@@ -70,17 +70,17 @@ function loadRaytracingMaterial(camera) {
                 position: new THREE.Vector3(35, 9.5, 40.0),
                 scale: 18,
                 color: new THREE.Color(0xA5CCD6),
-                reflectivity: 0.8,
+                reflectivity: 0.0,
                 specular: new THREE.Color(0x7299A3), 
-                    shininess: 3.0 
+                shininess: 3.0 
             },
             {
                 position: new THREE.Vector3(70, 9.5, 25),
                 scale: 14,
                 color: new THREE.Color(0xA3C0D3),
                 reflectivity: 0.9,
-                specular: new THREE.Color(0x888888), 
-                shininess: 0.0 
+                specular: new THREE.Color(0x92B0C2), 
+                shininess: 1.6
             },
 
         ]},
@@ -91,7 +91,7 @@ function loadRaytracingMaterial(camera) {
                     normal: new THREE.Vector3(0, 1, 0), 
                     offset: 0.0, 
                     color: new THREE.Color(0x808080), 
-                    reflectivity: 0.6, 
+                    reflectivity: 0.7, 
                     scale: 200.0,
                     specular: new THREE.Color(0x888888), 
                     shininess: 0.0 }

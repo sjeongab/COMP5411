@@ -30,6 +30,8 @@ const hybridFragmentShader = `
             float radius;
             vec3 color;
             float reflectivity;
+            vec3 specular;
+            float shininess;
         };
 
         struct Box {
@@ -37,6 +39,8 @@ const hybridFragmentShader = `
             float scale;
             vec3 color;
             float reflectivity;
+            vec3 specular;
+            float shininess;
         };
 
         struct Plane{
@@ -46,6 +50,8 @@ const hybridFragmentShader = `
             vec3 color;
             float reflectivity;
             float scale;
+            vec3 specular;
+            float shininess;
         };
 
         uniform Sphere spheres[5];
@@ -68,7 +74,7 @@ const hybridFragmentShader = `
             return length(max(dist, 0.0)) + min(max(dist.x, max(dist.y, dist.z)), 0.0);
         }
 
-        float intersect(vec3 pos, out vec3 hitColor, out float hitReflectivity) {
+        float intersect(vec3 pos, out vec3 hitColor, out float hitReflectivity, out vec3 hitSpec, out float hitShin) {
             float minDist = 1e10;
             hitColor = vec3(0.0);
             hitReflectivity = 0.0;
@@ -79,6 +85,8 @@ const hybridFragmentShader = `
                     minDist = d;
                     hitColor = spheres[i].color;
                     hitReflectivity = spheres[i].reflectivity;
+                    hitSpec = spheres[i].specular;
+                    hitShin = spheres[i].shininess;
                 }
             }
             for (int i=0; i < 3; i++){
@@ -87,6 +95,8 @@ const hybridFragmentShader = `
                     minDist = d;
                     hitColor = boxes[i].color;
                     hitReflectivity = boxes[i].reflectivity;
+                    hitSpec = boxes[i].specular;
+                    hitShin = boxes[i].shininess;
                 }
             }
 
@@ -95,6 +105,8 @@ const hybridFragmentShader = `
                 minDist = d;
                 hitColor = planes[0].color;
                 hitReflectivity = planes[0].reflectivity;
+                hitSpec = planes[0].specular;
+                hitShin = planes[0].shininess;
             }
 
             return minDist;
@@ -104,11 +116,13 @@ const hybridFragmentShader = `
             vec3 dummyColor;
             float dummyRefl;
             vec3 dummyNorm;
+            vec3 dummySpec;
+            float dummyShin;
             const float eps = 0.01;
             return normalize(vec3(
-            intersect(pos + vec3(eps, 0.0, 0.0), dummyColor, dummyRefl) - intersect(pos - vec3(eps, 0.0, 0.0), dummyColor, dummyRefl),
-            intersect(pos + vec3(0.0, eps, 0.0), dummyColor, dummyRefl) - intersect(pos - vec3(0.0, eps, 0.0), dummyColor, dummyRefl),
-            intersect(pos + vec3(0.0, 0.0, eps), dummyColor, dummyRefl) - intersect(pos - vec3(0.0, 0.0, eps), dummyColor, dummyRefl)
+            intersect(pos + vec3(eps, 0.0, 0.0), dummyColor, dummyRefl, dummySpec, dummyShin) - intersect(pos - vec3(eps, 0.0, 0.0), dummyColor, dummyRefl, dummySpec, dummyShin),
+            intersect(pos + vec3(0.0, eps, 0.0), dummyColor, dummyRefl, dummySpec, dummyShin) - intersect(pos - vec3(0.0, eps, 0.0), dummyColor, dummyRefl, dummySpec, dummyShin),
+            intersect(pos + vec3(0.0, 0.0, eps), dummyColor, dummyRefl, dummySpec, dummyShin) - intersect(pos - vec3(0.0, 0.0, eps), dummyColor, dummyRefl, dummySpec, dummyShin)
             ));
         }
 
@@ -122,12 +136,14 @@ const hybridFragmentShader = `
             for(int bounce = 0; bounce < maxBounces; bounce++){
                 float t = 0.0;
                 bool hit = false;
-                vec3 hitPos;
-                vec3 hitColor;
-                float hitReflectivity;
+                vec3 hitPos = vec3(0.0);
+                vec3 hitColor = vec3(0.0);
+                float hitRefl = 0.0;
+                vec3 hitSpec = vec3(0.0);
+                float hitShin = 0.0;
                 for (int i = 0; i < 128; i++){
                     vec3 pos = rayOrigin + t * rayDir;
-                    float d = intersect(pos, hitColor, hitReflectivity);
+                    float d = intersect(pos, hitColor, hitRefl, hitSpec, hitShin);
                     if (d < 0.001){
                         hitPos = pos;
                         hit = true;
@@ -137,25 +153,33 @@ const hybridFragmentShader = `
                     if (t > 500.0) break;
                 }
                 if (!hit){
-                    finalColor += vec3(0.1, 0.2, 0.2) * attenuation;
+                    finalColor += vec3(0.25098, 0.25098, 0.25098) * attenuation;
                     break;
                 }
 
                 vec3 normal = estimateNormal(hitPos);
                 float diff = max(dot(normal, lightDir), 0.0);
-                vec3 lighting = hitColor * lightColor * diff + hitColor * 0.1; // Ambient
+                vec3 lighting = hitColor * (0.1 + diff * lightColor); // Ambient
                 
+                if(hitShin > 0.0){
+                    vec3 L = normalize(lightDir);
+                    vec3 V = normalize(cameraPos - hitPos);
+                    vec3 R = reflect(-L, normal);
+                    float spec = pow(max(dot(R, V), 0.0), hitShin);
+                    lighting += hitSpec * spec;
+                    //lighting += hitSpec * 2.0;   
+                }
                 // Add to final color
-                finalColor += lighting * attenuation * (1.0 - hitReflectivity);
+                finalColor += lighting * attenuation * (1.0 - hitRefl);
 
                 
                 // If not reflective, stop
-                if (hitReflectivity <= 0.1) break;
+                if (hitRefl <= 0.05) break;
                 
                 // Prepare next reflection bounce
                 rayDir = reflect(rayDir, normal);
                 rayOrigin = hitPos + normal * 0.01; // Offset
-                attenuation *= hitReflectivity; // Attenuate by reflectivity
+                attenuation *= hitRefl; // Attenuate by reflectivity
                 
             }
         return finalColor;
@@ -176,7 +200,7 @@ const hybridFragmentShader = `
 
         float depth = texture2D(gDepth, suv).r;
         float reflectivity = texture2D(gReflection, suv).r;
-        if (depth >= 0.9999 || reflectivity <= 0.8){
+        if (depth >= 0.9999 || reflectivity < 0.5){
             vec3 albedo = texture2D(gColor, suv).rgb;
             FragColor = vec4(albedo, 1.0);
             return;
