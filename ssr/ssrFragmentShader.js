@@ -131,7 +131,7 @@ const ssrFragmentShader = `
             vec3 rayOrigin = origin;
             vec3 rayDir = direction;
             float attenuation = 1.0;
-            const int maxBounces = 3;
+            const int maxBounces = 1;
 
             for(int bounce = 0; bounce < maxBounces; bounce++){
                 float t = 0.0;
@@ -156,10 +156,19 @@ const ssrFragmentShader = `
                     finalColor += vec3(0.25098, 0.25098, 0.25098) * attenuation;
                     break;
                 }
+                else{
+                    vec2 uv = normalize((uCamMatrix * vec4(hitPos.xyz, 0.0))).xy;
+                    hitColor = texture2D(gColor, uv).rgb;
+                    hitRefl = texture2D(gReflection, uv).r;
+                    finalColor = hitColor;
+                    //finalColor = vec3(hitRefl,0.0, 0.0);
+                    return finalColor;
+                }
 
                 vec3 L = normalize(lightDir);
                 vec3 normal = estimateNormal(hitPos);
                 float diff = max(dot(normal, L), 0.0);
+                
                 vec3 lighting = hitColor * (0.1 + diff * lightColor); // Ambient
                 
                 if(hitShin > 0.0){
@@ -195,18 +204,10 @@ const ssrFragmentShader = `
         vec3 rayDir = normalize((uCamMatrix * vec4(rayEye.xyz, 0.0)).xyz);
 
         vec3 result = rayMarch(cameraPos, rayDir);
-        
-
-        float depth = texture2D(gDepth, suv).r;
-        float reflectivity = texture2D(gReflection, suv).r;
-        if (depth >= 0.9999 || reflectivity < 0.5){
-            vec3 albedo = texture2D(gColor, suv).rgb;
-            FragColor = vec4(albedo, 1.0);
-            return;
-        }
-         vec3 alb = texture2D(gColor, suv).rgb;
         FragColor = vec4(result, 1.0);
-        FragColor = vec4(alb, 1.0); 
+
+        //vec3 alb = texture2D(gColor, suv).rgb;
+        //FragColor = vec4(alb, 1.0); 
     }
 `;
 
