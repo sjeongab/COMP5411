@@ -10,7 +10,7 @@ const objects = [
     { type: 'sphere', position: [0, 20, 0], scale: 20, rotationSpeed: 0.8, color: new THREE.Color(0XE7C88D), reflectivity: 0.6, specular: new THREE.Color(0xB4955A), shininess: 1.3 },
     { type: 'sphere', position: [-35.0, 8, -20.0], scale: 8, rotationSpeed: 1.2, color: new THREE.Color(0xE7577F7), reflectivity: 1.0, specular: new THREE.Color(0xB4244C4), shininess: 0.0},
     { type: 'sphere', position: [-20, 9.5, 40.0], scale: 9.0, rotationSpeed: -1.0, color: new THREE.Color(0xB1C193), reflectivity: 0.5, specular: new THREE.Color(0xA0B082), shininess: 5.0 },
-    { type: 'sphere', position: [15.0, 10, 25], scale: 10, rotationSpeed: 0.9, color: new THREE.Color(0xDF9D97), reflectivity: 1.0, specular: new THREE.Color(0x888888), shininess: 0.0 },
+    { type: 'sphere', position: [15.0, 10, 25], scale: 10, rotationSpeed: 0.9, color: new THREE.Color(0xDF9D97), reflectivity: 0.0, specular: new THREE.Color(0x888888), shininess: 0.0 },
     { type: 'sphere', position: [-55, 5, 45], scale: 5, rotationSpeed: 1.5, color: new THREE.Color(0xABD0C4), reflectivity: 0.2, specular: new THREE.Color(0x78A091), shininess: 10.0,},
     { type: 'cube', position: [-40.0, 5.1, 15.0], scale: 10, rotationSpeed: 0, color: new THREE.Color(0XF0DD98), reflectivity: 0.7, specular: new THREE.Color(0x888888), shininess: 10.0},
     { type: 'cube', position: [35, 9.5, 40.0], scale: 18, rotationSpeed: 0, color: new THREE.Color(0xA5CCD6), reflectivity: 0.1, specular: new THREE.Color(0x7299A3), shininess: 3.0},

@@ -16,9 +16,7 @@ const hybridFragmentShader = `
         uniform vec3 cameraPos;
         uniform mat4 invViewProj; // Inverse view-projection matrix for ray direction
 
-        uniform mat4  uCamMatrix;
-        uniform mat4  uCamPos;
-        uniform mat4  uInvProj;
+        uniform mat4  uCamMatrix; // TODO: change name
 
         struct Ray {
             vec3 origin;
@@ -199,9 +197,9 @@ const hybridFragmentShader = `
 
         float depth = texture2D(gDepth, suv).r;
         float reflectivity = texture2D(gReflection, suv).r;
-        if (depth >= 0.9999 || reflectivity < 0.5){
+        if (depth >= 0.9999 || reflectivity < 0.1){
             vec3 albedo = texture2D(gColor, suv).rgb;
-            FragColor = vec4(albedo, 1.0);
+            FragColor = vec4(albedo, 0.0);
             return;
         }
 

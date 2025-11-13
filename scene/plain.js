@@ -16,7 +16,7 @@ export function init(canvas) {
   scene = new THREE.Scene();
 
   // Renderer
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true});
   renderer.setSize(window.innerWidth, window.innerHeight);
 
   // If canvas is not already in the DOM, add it
