@@ -32,7 +32,6 @@ export function init(canvas) {
     // Set up the camera
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
     camera.position.set(0, 75, 160);
-    const ssrCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
     let cameraControls = new OrbitControls(camera, renderer.domElement);
     cameraControls.target.set(0, 0, 0);
@@ -53,25 +52,6 @@ export function init(canvas) {
     const postProcessQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ssrMaterial);   
     ssrScene.add(postProcessQuad);
 
-    // Add Planar Reflection here (add buffer, shaders too)
-      // If addPlainObjects adds a regular plane, hide it
-      /*scene.traverse((obj) => {
-        if (
-          obj.isMesh &&
-          obj.geometry &&
-          obj.geometry.type === 'PlaneGeometry'
-        ) {
-          obj.visible = false;
-        }
-      });
-    
-      // Reflective plane with custom raymarch shader
-      const { mesh: reflectivePlane, material } = createReflectivePlane(scene);
-      // Raise it a bit to avoid depth conflict with anything
-      reflectivePlane.position.y += 0.001;
-      ssrScene.add(reflectivePlane);
-      reflectivePlaneMaterial = material;*/
-
     // Start the animation loop
     function animate(currentTime)  {
       if(!isRunning) return;
@@ -87,22 +67,6 @@ export function init(canvas) {
       ssrMaterial.uniforms.cameraPos.value.copy(camera.position);const viewProj = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, viewMatrix);
       ssrMaterial.uniforms.viewProj.value.copy(viewProj);
 
-      // Update shader uniforms for plane
-    if (reflectivePlaneMaterial && reflectivePlaneMaterial.uniforms) {
-      if (reflectivePlaneMaterial.uniforms.cameraPos) {
-        reflectivePlaneMaterial.uniforms.cameraPos.value.copy(camera.position);
-        
-        
-        reflectivePlaneMaterial.uniforms.uViewProjectionMatrix.value.copy(viewProj);
-        //console.log(camera.projectionMatrix);
-      }
-      if (reflectivePlaneMaterial.uniforms.lightDir) {
-          // If light is static, this is enough
-          reflectivePlaneMaterial.uniforms.lightDir.value
-          .set(5, 10, 7)
-          .normalize();
-      }
-    }
 
       renderer.setRenderTarget(gBuffer);
       renderer.clear(true, true, true);
