@@ -197,9 +197,9 @@ const hybridFragmentShader = `
 
         float depth = texture2D(gDepth, suv).r;
         float reflectivity = texture2D(gReflection, suv).r;
-        if (depth >= 0.9999 || reflectivity < 0.5){
+        if (depth >= 0.9999 || reflectivity < 0.1){
             vec3 albedo = texture2D(gColor, suv).rgb;
-            FragColor = vec4(albedo, 1.0);
+            FragColor = vec4(albedo, 0.0);
             return;
         }
 
