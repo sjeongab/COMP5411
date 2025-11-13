@@ -5,6 +5,7 @@ import { objects } from '../object/addObjects.js';
 import { loadRaytracingMaterial } from '../raytracing/raytracingBuffer.js';
 import { raytracingVertexShader } from '../raytracing/raytracingVertexShader.js';
 import { raytracingFragmentShader } from '../raytracing/raytracingFragmentShader.js';
+import { addSkyBox } from '../object/addSkyBox.js'
 
 
 let scene, camera, renderer;
@@ -28,8 +29,11 @@ export function init(canvas){
     cameraControls.minDistance = 10;
     cameraControls.update();
 
+    addSkyBox(renderer, scene);
+
     // Custom shader for ray tracing
     const rayTraceMaterial = loadRaytracingMaterial(camera);
+    
 
     // Create the quad mesh
     const quadGeometry = new THREE.PlaneGeometry(2, 2);
@@ -59,6 +63,8 @@ export function init(canvas){
         const viewProj = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, viewMatrix);
         rayTraceMaterial.uniforms.invViewProj.value.copy(viewProj.invert());
 
+        renderer.setRenderTarget(null);
+      renderer.clear(true, true, true);
         renderer.render(scene, camera);
     }
     animate();

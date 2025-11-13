@@ -119,7 +119,7 @@ vec3 estimateNormal(vec3 pos) {
 }
 
 // --------- Ray Marching ----------
-vec3 rayMarch(vec3 origin, vec3 dir) {
+vec4 rayMarch(vec3 origin, vec3 dir) {
     vec3 col = vec3(0.0);
     vec3 ro = origin;
     vec3 rd = dir;
@@ -152,6 +152,9 @@ vec3 rayMarch(vec3 origin, vec3 dir) {
         }
 
         if (!hit) {
+            if(bounce==0){
+                return vec4(0.0);
+            }
             col += vec3(0.25098, 0.25098, 0.25098) * attenuation; // پس‌زمینه
             break;
         }
@@ -178,7 +181,7 @@ vec3 rayMarch(vec3 origin, vec3 dir) {
         attenuation *= hitRefl;
     }
 
-    return col;
+    return vec4(col, 1.0);
 }
 
 void main() {
@@ -196,8 +199,8 @@ void main() {
     vec3 ro = cameraPos;
     vec3 rd = normalize(worldFar.xyz - ro);
 
-    vec3 color = rayMarch(ro, rd);
-    FragColor = vec4(color, 1.0);
+    vec4 color = rayMarch(ro, rd);
+    FragColor = color;//vec4(color, 1.0);
 }
 `;
 
