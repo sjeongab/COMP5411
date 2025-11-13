@@ -42,20 +42,9 @@ const ssrFragmentShader = `
             float shininess;
         };
 
-        struct Plane{
-            vec3 position;
-            vec3 normal;
-            float offset;
-            vec3 color;
-            float reflectivity;
-            float scale;
-            vec3 specular;
-            float shininess;
-        };
 
         uniform Sphere spheres[5];
         uniform Box boxes[3];
-        uniform Plane planes[1];
 
         out vec4 FragColor;
 
@@ -93,11 +82,6 @@ const ssrFragmentShader = `
             return length(max(dist, 0.0)) + min(max(dist.x, max(dist.y, dist.z)), 0.0);
         }
 
-        float intersectPlane(vec3 pos, vec3 center, float scale) {
-            vec3 dist = abs(pos - center) - vec3(scale/2.0, 0.01, scale/2.0);
-            return length(max(dist, 0.0)) + min(max(dist.x, max(dist.y, dist.z)), 0.0);
-        }
-
         float intersect(vec3 pos, out vec3 hitColor, out float hitReflectivity, out vec3 hitSpec, out float hitShin) {
             float minDist = 1e10;
             hitColor = vec3(0.0);
@@ -124,15 +108,6 @@ const ssrFragmentShader = `
                 }
             }
 
-            /*float d = intersectPlane(pos, planes[0].position, planes[0].scale);
-            if (d < minDist){
-                minDist = d;
-                hitColor = planes[0].color;
-                hitReflectivity = planes[0].reflectivity;
-                hitSpec = planes[0].specular;
-                hitShin = planes[0].shininess;
-            }*/
-
             return minDist;
         }
 
@@ -155,7 +130,7 @@ const ssrFragmentShader = `
             vec3 rayOrigin = origin;
             vec3 rayDir = direction;
             float attenuation = 1.0;
-            const int maxBounces = 1;
+            const int maxBounces = 2;
 
             for(int bounce = 0; bounce < maxBounces; bounce++){
                 float t = 0.0;
@@ -168,7 +143,7 @@ const ssrFragmentShader = `
                 for (int i = 0; i < 128; i++){
                     vec3 pos = rayOrigin + t * rayDir;
                     float d = intersect(pos, hitColor, hitRefl, hitSpec, hitShin);
-                    if (d < 0.001){
+                    if (d < 0.01){
                         hitPos = pos;
                         hit = true;
                         break;
@@ -177,45 +152,31 @@ const ssrFragmentShader = `
                     if (t > 500.0) break;
                 }
                 if (!hit){
-                    vec2 uv = worldToUV(hitPos);
-                    finalColor = texture2D(gColor, uv).rgb;
-                    return vec4(finalColor, 0.0);
-                    //finalColor += vec3(0.25098, 0.25098, 0.25098) * attenuation;
-                    //break;
+                    if(bounce == 0){
+                        vec2 uv = worldToUV(hitPos);
+                        finalColor = texture2D(gColor, uv).rgb;
+                        return vec4(finalColor, 0.0);
+                    }
+                    finalColor += vec3(0.25098, 0.25098, 0.25098) * attenuation;
+                    break;
                 }
                 else{
                     vec2 uv = worldToUV(hitPos);
                     hitColor = texture2D(gColor, uv).rgb;
                     hitRefl = texture2D(gReflection, uv).r;
-                    finalColor = hitColor;
-                    return vec4(finalColor, 1.0);
-                }
+                    finalColor += hitColor * attenuation * (1.0 - hitRefl);
 
-                vec3 L = normalize(lightDir);
-                vec3 normal = estimateNormal(hitPos);
-                float diff = max(dot(normal, L), 0.0);
-                
-                vec3 lighting = hitColor * (0.1 + diff * lightColor); // Ambient
-                
-                if(hitShin > 0.0){
-                    vec3 V = normalize(cameraPos - hitPos);
-                    vec3 R = reflect(-L, normal);
-                    float spec = pow(max(dot(R, V), 0.0), hitShin);
-                    lighting += hitSpec * spec;  
-                }
-                // Add to final color
-                finalColor += lighting * attenuation * (1.0 - hitRefl);
+                    if (hitRefl < 0.1) break;
 
-                
-                // If not reflective, stop
-                if (hitRefl < 0.1) break;
-                
-                // Prepare next reflection bounce
-                rayDir = reflect(rayDir, normal);
-                rayOrigin = hitPos + normal * 0.01; // Offset
-                attenuation *= hitRefl; // Attenuate by reflectivity
+                    vec3 normal = estimateNormal(hitPos);
+                    rayDir = reflect(rayDir, normal);
+                    rayOrigin = hitPos + normal;
+
+                    attenuation *= hitRefl;
+                }
                 
             }
+        //finalColor += vec3(0.25098, 0.25098, 0.25098) * attenuation;
         return vec4(finalColor, 1.0);
     }
 

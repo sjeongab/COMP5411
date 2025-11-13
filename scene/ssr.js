@@ -85,7 +85,7 @@ export function init(canvas) {
       ssrMaterial.uniforms.inverseViewMatrix.value.copy(camera.matrixWorldInverse).invert();
       const viewMatrix = camera.matrixWorldInverse;
       ssrMaterial.uniforms.cameraPos.value.copy(camera.position);const viewProj = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, viewMatrix);
-        ssrMaterial.uniforms.viewProj.value.copy(viewProj);
+      ssrMaterial.uniforms.viewProj.value.copy(viewProj);
 
       // Update shader uniforms for plane
     if (reflectivePlaneMaterial && reflectivePlaneMaterial.uniforms) {
