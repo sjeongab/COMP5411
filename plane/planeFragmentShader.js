@@ -14,6 +14,11 @@ uniform float planeReflectivity;
 uniform mat4 uViewProjectionMatrix;
 uniform vec2 resolution;
 uniform sampler2D gColor;
+uniform sampler2D gNormal;
+
+uniform mat4 invViewProj;
+uniform mat4 uCamMatrix;
+
 
 
 struct Sphere {
@@ -32,6 +37,27 @@ uniform Sphere spheres[5];
 uniform Box boxes[3];
 
 out vec4 FragColor;
+
+vec2 worldToUV(vec3 worldPos) {
+    // Transform to clip space
+    vec4 clip = uViewProjectionMatrix * vec4(worldPos, 1.0);
+    
+    // Perspective divide to NDC [-1,1]
+    vec3 ndc = clip.xyz / clip.w;
+    
+    // Check if point is in front of camera (optional: discard invalid)
+    if (ndc.z < -1.0 || ndc.z > 1.0) {
+        return vec2(-1.0); // Invalid (behind camera or out of range); handle in caller (e.g., skip sampling)
+    }
+    
+    // Map to UV [0,1] (bottom-left origin)
+    vec2 uv = ndc.xy * 0.5 + 0.5;
+    
+    // Clamp to [0,1] to avoid out-of-bounds sampling
+    uv = clamp(uv, 0.0, 1.0);
+    
+    return uv;
+}
 
 // ---------- SDF ----------
 float sdSphere(vec3 p, float r) {
@@ -85,7 +111,7 @@ vec3 estimateNormal(vec3 pos) {
 }
 
 // Calculate reflection
-vec3 traceReflection(vec3 origin, vec3 dir) {
+vec3 rayMarch(vec3 origin, vec3 dir) {
     const int MAX_STEPS = 128;
     const float MAX_DIST = 500.0;
     const float SURF_EPS = 0.001;
@@ -99,10 +125,8 @@ vec3 traceReflection(vec3 origin, vec3 dir) {
         vec3 p = origin + dir * t;
         float d = mapScene(p, hitColor);
         if (d < SURF_EPS) {
-            vec4 clipSpace = uViewProjectionMatrix * vec4(p, 1.0);
-            vec3 ndc = clipSpace.xyz / clipSpace.w;
-            vec2 screenSpaceXY = (ndc.xy * 0.5 + 0.5);
-            hitColor = texture2D(gColor, screenSpaceXY).rgb;
+            vec2 uv = worldToUV(p);
+            hitColor = texture2D(gColor, uv).rgb;
             hit = true;
             hitPos = p;
             break;
@@ -116,35 +140,23 @@ vec3 traceReflection(vec3 origin, vec3 dir) {
         return vec3(0.0);
     }
 
-    vec3 n = estimateNormal(hitPos);
-    vec3 L = normalize(lightDir);
-
-    float diff = max(dot(n, L), 0.0);
-    vec3 col = hitColor * (0.1 + diff * lightColor);
+    vec3 col = hitColor;
 
 
     return col;
 }
 
 void main() {
-    vec3 N = normalize(vWorldNormal);
+    vec2 uv = (gl_FragCoord.xy / resolution) * 2.0 - 1.0;
+    vec2 suv = gl_FragCoord.xy / resolution;
+    vec4 rayClip = vec4(uv, -1.0, 1.0);
+    vec4 rayEye = invViewProj * rayClip;
+    rayEye.xyz /= rayEye.w;
+    rayEye = vec4(rayEye.xy, -1.0, 0.0);
+    vec3 rayDir = normalize((uCamMatrix * vec4(rayEye.xyz, 0.0)).xyz);
 
-    // View direction from point to camera
-    vec3 V = normalize(cameraPos - vWorldPos);
-
-    // Reflection ray direction (reflection of incoming ray from camera)
-    vec3 R = reflect(-V, N);
-
-    // Small offset to avoid self-intersection
-    vec3 reflColor = traceReflection(vWorldPos + N * 0.01, normalize(R));
-
-    // Simple diffuse for the plane itself
-    float diff = max(dot(N, normalize(lightDir)), 0.0);
-    vec3 base = planeColor * (0.1 + diff * lightColor) + vec3(0.25098, 0.25098, 0.25098);
-
-    vec3 finalColor = base*(1.0-planeReflectivity)+reflColor*planeReflectivity;
-
-    FragColor = vec4(finalColor, 1.0);
+    vec3 result = rayMarch(cameraPos, rayDir);
+    FragColor = vec4(result, 1.0);
 }
 `;
 

@@ -7,7 +7,8 @@ const gBufferVertexShader = `
     void main() {
         vec3 vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
         vViewPosition  = (modelViewMatrix * vec4(position, 1.0)).xyz;
-        vNormal        = normalMatrix * normal;
+        mat3 normalMatrix = transpose(inverse(mat3(modelMatrix)));
+        vNormal = normalize(normalMatrix*normal);
         gl_Position    = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     }
 `;

@@ -107,7 +107,7 @@ function loadSSRMaterial(ssrCamera) {
                             normal: new THREE.Vector3(0, 1, 0), 
                             offset: 0.0, 
                             color: new THREE.Color(0x808080), 
-                            reflectivity: 0.7, 
+                            reflectivity: 0.0, 
                             scale: 200.0,
                             specular: new THREE.Color(0x888888), 
                             shininess: 0.0 }

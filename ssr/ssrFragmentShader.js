@@ -195,7 +195,7 @@ const ssrFragmentShader = `
 
                     if (hitRefl < 0.1) break;
 
-                    vec3 normal = estimateNormal(hitPos);
+                    vec3 normal = texture2D(gNormal, uv).rgb;
                     rayDir = reflect(rayDir, normal);
                     rayOrigin = hitPos + normal;
 

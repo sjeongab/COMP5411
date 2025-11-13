@@ -16,6 +16,7 @@ function addPlane(scene, config) {
           side: THREE.DoubleSide,
       });
       const plane = new THREE.Mesh(planeGeometry, planeGbufferMaterial);
+
       plane.rotateX(-Math.PI/2);
       scene.add(plane);
 }
