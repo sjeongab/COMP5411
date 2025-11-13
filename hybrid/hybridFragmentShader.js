@@ -16,9 +16,7 @@ const hybridFragmentShader = `
         uniform vec3 cameraPos;
         uniform mat4 invViewProj; // Inverse view-projection matrix for ray direction
 
-        uniform mat4  uCamMatrix;
-        uniform mat4  uCamPos;
-        uniform mat4  uInvProj;
+        uniform mat4  uCamMatrix; // TODO: change name
 
         struct Ray {
             vec3 origin;

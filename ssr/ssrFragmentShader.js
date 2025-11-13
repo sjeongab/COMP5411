@@ -14,11 +14,10 @@ const ssrFragmentShader = `
         uniform vec3 lightColor;
 
         uniform vec3 cameraPos;
+        uniform mat4 viewProj;
         uniform mat4 invViewProj; // Inverse view-projection matrix for ray direction
 
         uniform mat4  uCamMatrix;
-        uniform mat4  uCamPos;
-        uniform mat4  uInvProj;
 
         struct Ray {
             vec3 origin;
@@ -60,6 +59,31 @@ const ssrFragmentShader = `
 
         out vec4 FragColor;
 
+        vec2 worldToUV(vec3 worldPos) {
+            // Transform to clip space
+            vec4 clip = viewProj * vec4(worldPos, 1.0);
+            // Alternative if using viewProj: vec4 clip = viewProj * vec4(worldPos, 1.0);
+            
+            // Perspective divide to NDC [-1,1]
+            vec3 ndc = clip.xyz / clip.w;
+            
+            // Check if point is in front of camera (optional: discard invalid)
+            if (ndc.z < -1.0 || ndc.z > 1.0) {
+                return vec2(-1.0); // Invalid (behind camera or out of range); handle in caller (e.g., skip sampling)
+            }
+            
+            // Map to UV [0,1] (bottom-left origin)
+            vec2 uv = ndc.xy * 0.5 + 0.5;
+            
+            // Clamp to [0,1] to avoid out-of-bounds sampling
+            uv = clamp(uv, 0.0, 1.0);
+            
+            // Optional: Flip y for top-left origin (e.g., some UI systems)
+            // uv.y = 1.0 - uv.y;
+            
+            return uv;
+        }
+
         float intersectSphere(vec3 pos, vec3 center, float radius) {
             return length(pos - center) - radius;
         }
@@ -100,14 +124,14 @@ const ssrFragmentShader = `
                 }
             }
 
-            float d = intersectPlane(pos, planes[0].position, planes[0].scale);
+            /*float d = intersectPlane(pos, planes[0].position, planes[0].scale);
             if (d < minDist){
                 minDist = d;
                 hitColor = planes[0].color;
                 hitReflectivity = planes[0].reflectivity;
                 hitSpec = planes[0].specular;
                 hitShin = planes[0].shininess;
-            }
+            }*/
 
             return minDist;
         }
@@ -126,7 +150,7 @@ const ssrFragmentShader = `
             ));
         }
 
-        vec3 rayMarch(vec3 origin, vec3 direction) {
+        vec4 rayMarch(vec3 origin, vec3 direction) {
             vec3 finalColor = vec3(0.0);
             vec3 rayOrigin = origin;
             vec3 rayDir = direction;
@@ -153,16 +177,18 @@ const ssrFragmentShader = `
                     if (t > 500.0) break;
                 }
                 if (!hit){
-                    finalColor += vec3(0.25098, 0.25098, 0.25098) * attenuation;
-                    break;
+                    vec2 uv = worldToUV(hitPos);
+                    finalColor = texture2D(gColor, uv).rgb;
+                    return vec4(finalColor, 0.0);
+                    //finalColor += vec3(0.25098, 0.25098, 0.25098) * attenuation;
+                    //break;
                 }
                 else{
-                    vec2 uv = normalize((uCamMatrix * vec4(hitPos.xyz, 0.0))).xy;
+                    vec2 uv = worldToUV(hitPos);
                     hitColor = texture2D(gColor, uv).rgb;
                     hitRefl = texture2D(gReflection, uv).r;
                     finalColor = hitColor;
-                    //finalColor = vec3(hitRefl,0.0, 0.0);
-                    return finalColor;
+                    return vec4(finalColor, 1.0);
                 }
 
                 vec3 L = normalize(lightDir);
@@ -190,7 +216,7 @@ const ssrFragmentShader = `
                 attenuation *= hitRefl; // Attenuate by reflectivity
                 
             }
-        return finalColor;
+        return vec4(finalColor, 1.0);
     }
 
 
@@ -203,11 +229,8 @@ const ssrFragmentShader = `
         rayEye = vec4(rayEye.xy, -1.0, 0.0);
         vec3 rayDir = normalize((uCamMatrix * vec4(rayEye.xyz, 0.0)).xyz);
 
-        vec3 result = rayMarch(cameraPos, rayDir);
-        FragColor = vec4(result, 1.0);
-
-        //vec3 alb = texture2D(gColor, suv).rgb;
-        //FragColor = vec4(alb, 1.0); 
+        vec4 result = rayMarch(cameraPos, rayDir);
+        FragColor = result;
     }
 `;
 

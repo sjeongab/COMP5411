@@ -79,23 +79,26 @@ export function init(canvas) {
       cameraControls.update();
 
       ssrMaterial.uniforms.uCamMatrix.value.copy(camera.matrixWorld);
+      
       ssrMaterial.uniforms.invViewProj.value.copy(camera.projectionMatrix).invert();
       ssrMaterial.uniforms.inverseProjectionMatrix.value.copy(camera.projectionMatrix).invert();
       ssrMaterial.uniforms.inverseViewMatrix.value.copy(camera.matrixWorldInverse).invert();
-      ssrMaterial.uniforms.cameraPos.value.copy(camera.position);
+      const viewMatrix = camera.matrixWorldInverse;
+      ssrMaterial.uniforms.cameraPos.value.copy(camera.position);const viewProj = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, viewMatrix);
+        ssrMaterial.uniforms.viewProj.value.copy(viewProj);
 
       // Update shader uniforms for plane
     if (reflectivePlaneMaterial && reflectivePlaneMaterial.uniforms) {
       if (reflectivePlaneMaterial.uniforms.cameraPos) {
         reflectivePlaneMaterial.uniforms.cameraPos.value.copy(camera.position);
-        const viewMatrix = camera.matrixWorldInverse;
-        const viewProj = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, viewMatrix);
+        
+        
         reflectivePlaneMaterial.uniforms.uViewProjectionMatrix.value.copy(viewProj);
         //console.log(camera.projectionMatrix);
       }
       if (reflectivePlaneMaterial.uniforms.lightDir) {
-        // If light is static, this is enough
-        reflectivePlaneMaterial.uniforms.lightDir.value
+          // If light is static, this is enough
+          reflectivePlaneMaterial.uniforms.lightDir.value
           .set(5, 10, 7)
           .normalize();
       }

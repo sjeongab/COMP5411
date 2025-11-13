@@ -18,6 +18,7 @@ function loadSSRMaterial(ssrCamera) {
         resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
         uCamMatrix: { value: ssrCamera.matrixWorld},
         invViewProj: {value: new THREE.Matrix4()},
+        viewProj: {value: new THREE.Matrix4()},
         
         projectionMatrix: { value: ssrCamera.projectionMatrix },
         inverseProjectionMatrix: { value: new THREE.Matrix4() },
