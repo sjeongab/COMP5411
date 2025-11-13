@@ -138,20 +138,6 @@ const ssrFragmentShader = `
             return minDist;
         }
 
-        vec3 estimateNormal(vec3 pos){
-            vec3 dummyColor;
-            float dummyRefl;
-            vec3 dummyNorm;
-            vec3 dummySpec;
-            float dummyShin;
-            const float eps = 0.01;
-            return normalize(vec3(
-            intersect(pos + vec3(eps, 0.0, 0.0), dummyColor, dummyRefl, dummySpec, dummyShin) - intersect(pos - vec3(eps, 0.0, 0.0), dummyColor, dummyRefl, dummySpec, dummyShin),
-            intersect(pos + vec3(0.0, eps, 0.0), dummyColor, dummyRefl, dummySpec, dummyShin) - intersect(pos - vec3(0.0, eps, 0.0), dummyColor, dummyRefl, dummySpec, dummyShin),
-            intersect(pos + vec3(0.0, 0.0, eps), dummyColor, dummyRefl, dummySpec, dummyShin) - intersect(pos - vec3(0.0, 0.0, eps), dummyColor, dummyRefl, dummySpec, dummyShin)
-            ));
-        }
-
         vec4 rayMarch(vec3 origin, vec3 direction) {
             vec3 finalColor = vec3(0.0);
             vec3 rayOrigin = origin;
