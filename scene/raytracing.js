@@ -18,7 +18,7 @@ export function init(canvas){
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
-    //renderer.autoClear = false;
+    renderer.autoClear = false;
 
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
     camera.position.set(0, 75, 160);
@@ -45,7 +45,7 @@ export function init(canvas){
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
-        //rayTraceMaterial.uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
+        rayTraceMaterial.uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
     });
 
     // Animate loop
@@ -53,8 +53,6 @@ export function init(canvas){
         if(!isRunning) return;
         updateFPS(currentTime);
         cameraControls.update();
-
-        requestAnimationFrame(animate);
 
         rayTraceMaterial.uniforms.cameraPos.value.copy(camera.position);
         rayTraceMaterial.uniforms.uCamMatrix.value.copy(camera.matrixWorld);
@@ -64,8 +62,10 @@ export function init(canvas){
         rayTraceMaterial.uniforms.invViewProj.value.copy(viewProj.invert());
 
         renderer.setRenderTarget(null);
-      renderer.clear(true, true, true);
+        renderer.clear(true, true, true);
         renderer.render(scene, camera);
+
+        requestAnimationFrame(animate);
     }
     animate();
 }

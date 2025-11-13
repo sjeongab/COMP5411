@@ -13,6 +13,7 @@ function addPlane(scene, config) {
           vertexShader: gBufferMaterial.vertexShader,
           fragmentShader: gBufferMaterial.fragmentShader,
           glslVersion:THREE.GLSL3,
+          side: THREE.DoubleSide,
       });
       const plane = new THREE.Mesh(planeGeometry, planeGbufferMaterial);
       plane.rotateX(-Math.PI/2);

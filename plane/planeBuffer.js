@@ -51,6 +51,7 @@ function createReflectivePlane(scene) {  // Pass the scene as a parameter now
     fragmentShader: planeFragmentShader,
     glslVersion: THREE.GLSL3,
     uniforms,
+    side: THREE.DoubleSide,
   });
 
   const mesh = new THREE.Mesh(geometry, material);

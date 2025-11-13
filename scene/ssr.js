@@ -55,7 +55,7 @@ export function init(canvas) {
 
     // Add Planar Reflection here (add buffer, shaders too)
       // If addPlainObjects adds a regular plane, hide it
-      scene.traverse((obj) => {
+      /*scene.traverse((obj) => {
         if (
           obj.isMesh &&
           obj.geometry &&
@@ -69,8 +69,8 @@ export function init(canvas) {
       const { mesh: reflectivePlane, material } = createReflectivePlane(scene);
       // Raise it a bit to avoid depth conflict with anything
       reflectivePlane.position.y += 0.001;
-      scene.add(reflectivePlane);
-      reflectivePlaneMaterial = material;
+      ssrScene.add(reflectivePlane);
+      reflectivePlaneMaterial = material;*/
 
     // Start the animation loop
     function animate(currentTime)  {

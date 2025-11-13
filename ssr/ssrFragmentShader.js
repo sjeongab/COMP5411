@@ -42,9 +42,21 @@ const ssrFragmentShader = `
             float shininess;
         };
 
+        struct Plane{
+            vec3 position;
+            vec3 normal;
+            float offset;
+            vec3 color;
+            float reflectivity;
+            float scale;
+            vec3 specular;
+            float shininess;
+        };
+
 
         uniform Sphere spheres[5];
         uniform Box boxes[3];
+        uniform Plane planes[1];
 
         out vec4 FragColor;
 
@@ -82,6 +94,11 @@ const ssrFragmentShader = `
             return length(max(dist, 0.0)) + min(max(dist.x, max(dist.y, dist.z)), 0.0);
         }
 
+        float intersectPlane(vec3 pos, vec3 center, float scale) {
+            vec3 dist = abs(pos - center) - vec3(scale/2.0, 0.01, scale/2.0);
+            return length(max(dist, 0.0)) + min(max(dist.x, max(dist.y, dist.z)), 0.0);
+        }
+
         float intersect(vec3 pos, out vec3 hitColor, out float hitReflectivity, out vec3 hitSpec, out float hitShin) {
             float minDist = 1e10;
             hitColor = vec3(0.0);
@@ -107,6 +124,16 @@ const ssrFragmentShader = `
                     hitShin = boxes[i].shininess;
                 }
             }
+
+            float d = intersectPlane(pos, planes[0].position, planes[0].scale);
+            if (d < minDist){
+                minDist = d;
+                hitColor = planes[0].color;
+                hitReflectivity = planes[0].reflectivity;
+                hitSpec = planes[0].specular;
+                hitShin = planes[0].shininess;
+            }
+
 
             return minDist;
         }

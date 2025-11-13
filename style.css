@@ -4,7 +4,7 @@ body {
     height: 100vh;
     width: 100vw;
     font-family: sans-serif;
-    background: blueviolet;
+    background: transparent;
     text-shadow: 0 0 3px black;
 }
 a, body {
