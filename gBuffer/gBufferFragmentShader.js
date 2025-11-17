@@ -19,14 +19,14 @@ const gBufferFragmentShader = `
         vec3 lightPos = vec3(5, 10, 7);
 
         vec3 ambientColor = vec3(0.25098, 0.25098, 0.25098); // TODO: import ambientColor as uniform
-        vec3 ambient = ambientColor * uColor;
+        vec3 ambient = ambientColor*uColor;
 
         vec3 normal = normalize(vNormal);
 
         
         vec3 lightDirection = normalize(lightPos - vWorldPosition);
         float diff = max(dot(normal, lightDirection), 0.0);
-        vec3 diffuse = uColor * (0.1 + diff * vec3(1.0));
+        vec3 diffuse = uColor * diff;
 
         vec3 specular = vec3(0.0);
 
@@ -38,7 +38,7 @@ const gBufferFragmentShader = `
             specular = pow(spec, uShininess) * uSpecular;
         }
 
-        vec3 final = (ambient + diffuse + specular) * (1.0-uReflectivity);
+        vec3 final = (ambient + diffuse + specular);
         gColor = vec4(final, 1.0);
         gNormal = vec4(normal, 1.0);
         gPosition = vec4(vWorldPosition, 1.0);

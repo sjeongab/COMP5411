@@ -170,14 +170,16 @@ const ssrFragmentShader = `
                         finalColor = texture2D(gColor, uv).rgb;
                         return vec4(finalColor, 0.0);
                     }
-                    finalColor += vec3(0.25098, 0.25098, 0.25098) * attenuation;
-                    break;
+                    
+                    
                 }
                 else{
                     vec2 uv = worldToUV(hitPos);
                     hitColor = texture2D(gColor, uv).rgb;
                     hitRefl = texture2D(gReflection, uv).r;
-                    finalColor += hitColor * attenuation * (1.0 - hitRefl);
+                    
+                    finalColor = mix(finalColor, hitColor, attenuation);
+                    attenuation *= hitRefl;
 
                     if (hitRefl < 0.1) break;
 
@@ -185,11 +187,12 @@ const ssrFragmentShader = `
                     rayDir = reflect(rayDir, normal);
                     rayOrigin = hitPos + normal;
 
-                    attenuation *= hitRefl;
+                    
                 }
                 
             }
-        //finalColor += vec3(0.25098, 0.25098, 0.25098) * attenuation;
+        finalColor = mix(finalColor, vec3(0.2508), attenuation);
+
         return vec4(finalColor, 1.0);
     }
 
