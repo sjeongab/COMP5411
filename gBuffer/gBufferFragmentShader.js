@@ -30,13 +30,13 @@ const gBufferFragmentShader = `
 
         vec3 specular = vec3(0.0);
 
-        if(uShininess > 0.0){
+        /*if(uShininess > 0.0){
             vec3 camPos = vec3(0, 75, 160);
             vec3 viewDir = normalize(camPos-vWorldPosition);
             vec3 reflectDir = reflect(-lightDirection, normal);
             float spec = max(dot(reflectDir, viewDir), 0.0);
             specular = pow(spec, uShininess) * uSpecular;
-        }
+        }*/
 
         vec3 final = (ambient + diffuse + specular);
         gColor = vec4(final, 1.0);

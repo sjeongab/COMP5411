@@ -181,9 +181,19 @@ const ssrFragmentShader = `
                     finalColor = mix(finalColor, hitColor, attenuation);
                     attenuation *= hitRefl;
 
+                    vec3 normal = texture2D(gNormal, uv).rgb;
+
+                    if(hitShin > 0.0){
+                        vec3 viewDir = normalize(cameraPos-hitPos);
+                        vec3 reflectDir = reflect(-lightDir, normal);
+                        float spec = max(dot(reflectDir, viewDir), 0.0);
+                        vec3 specular = pow(spec, hitShin) * hitSpec;
+                        finalColor += specular;
+                    }
+
                     if (hitRefl < 0.1) break;
 
-                    vec3 normal = texture2D(gNormal, uv).rgb;
+                    
                     rayDir = reflect(rayDir, normal);
                     rayOrigin = hitPos + normal;
 
