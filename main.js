@@ -9,7 +9,7 @@ import { addSkyBox } from './object/addSkyBox.js';
 import { createReflectivePlane } from './plane/planeBuffer.js';
 
 // SSR / Hybrid (adjust paths according to your project)
-import { loadSSRMaterial, gBuffer } from './ssr/ssrBuffer.js';
+import { loadSSRMaterial, loadSSRAveragedMaterial, gBuffer } from './ssr/ssrBuffer.js';
 import { loadRaytracingMaterial } from './raytracing/raytracingBuffer.js';
 
 // ---------- Canvas ----------
@@ -83,7 +83,7 @@ let reflectivePlaneMaterial = null;
 }
 
 // ---------- State ----------
-let mode = 'Plain';       // 'Plain' | 'SSR' | 'Hybrid'
+let mode = 'Plain';       // 'Plain' | 'SSR' | 'SSR_Averaged' | 'Hybrid'
 let phongMode = 'Phong';  // 'Phong' | 'NoPhong'
 
 // ---------- Post-process Pipelines ----------
@@ -92,6 +92,12 @@ let ssrScene = null;
 let ssrCamera = null;
 let ssrQuad = null;
 let ssrMaterial = null;
+
+// SSR Averaged
+let ssrAveragedScene = null;
+let ssrAveragedCamera = null;
+let ssrAveragedQuad = null;
+let ssrAveragedMaterial = null;
 
 // Hybrid full-screen RT
 let rtScene = null;
@@ -131,6 +137,9 @@ phongSelect.addEventListener('change', () => {
   if (ssrMaterial && ssrMaterial.uniforms.phongMode) {
     ssrMaterial.uniforms.phongMode.value = v;
   }
+  if (ssrAveragedMaterial && ssrAveragedMaterial.uniforms.phongMode) {
+    ssrAveragedMaterial.uniforms.phongMode.value = v;
+  }
   if (raytracingMaterial && raytracingMaterial.uniforms.phongMode) {
     raytracingMaterial.uniforms.phongMode.value = v;
   }
@@ -139,6 +148,7 @@ phongSelect.addEventListener('change', () => {
 // ---------- Helpers ----------
 function clearPost() {
   ssrScene = ssrCamera = ssrQuad = ssrMaterial = null;
+  ssrAveragedScene = ssrAveragedCamera = ssrAveragedQuad = ssrAveragedMaterial = null;
   rtScene = rtCamera = rtQuad = raytracingMaterial = null;
   // Keep reflectivePlane; only visibility is controlled in setupMode
 }
@@ -168,6 +178,25 @@ function setupMode() {
     );
     ssrQuad.frustumCulled = false;
     ssrScene.add(ssrQuad);
+  }
+
+  // ----- SSR_Averaged Mode -----
+  else if (mode === 'SSR_Averaged') {
+    ssrAveragedScene = new THREE.Scene();
+    ssrAveragedCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+    ssrAveragedMaterial = loadSSRAveragedMaterial(ssrAveragedCamera);
+    if (ssrAveragedMaterial.uniforms.phongMode) {
+      ssrAveragedMaterial.uniforms.phongMode.value =
+        (phongMode === 'Phong') ? 1 : 0;
+    }
+
+    ssrAveragedQuad = new THREE.Mesh(
+      new THREE.PlaneGeometry(2, 2),
+      ssrAveragedMaterial
+    );
+    ssrAveragedQuad.frustumCulled = false;
+    ssrAveragedScene.add(ssrAveragedQuad);
   }
 
   // ----- Hybrid Mode -----
@@ -263,6 +292,48 @@ function animate() {
     return;
   }
 
+  // ----- SSR_Averaged -----
+  if (mode === 'SSR_Averaged' && ssrAveragedScene && ssrAveragedMaterial) {
+    renderer.setRenderTarget(gBuffer);
+    renderer.clear(true, true, true);
+    renderer.render(scene, camera);
+    renderer.setRenderTarget(null);
+
+    const viewMatrix = camera.matrixWorldInverse.clone();
+    const projMatrix = camera.projectionMatrix.clone();
+    const invProjMatrix = projMatrix.clone().invert();
+    const invViewMatrix = viewMatrix.clone().invert();
+
+    if (ssrAveragedMaterial.uniforms.projectionMatrix) {
+      ssrAveragedMaterial.uniforms.projectionMatrix.value.copy(projMatrix);
+    }
+    if (ssrAveragedMaterial.uniforms.inverseProjectionMatrix) {
+      ssrAveragedMaterial.uniforms.inverseProjectionMatrix.value.copy(invProjMatrix);
+    }
+    if (ssrAveragedMaterial.uniforms.inverseViewMatrix) {
+      ssrAveragedMaterial.uniforms.inverseViewMatrix.value.copy(invViewMatrix);
+    }
+    if (ssrAveragedMaterial.uniforms.cameraWorldPosition) {
+      ssrAveragedMaterial.uniforms.cameraWorldPosition.value.copy(camera.position);
+    }
+    if (ssrAveragedMaterial.uniforms.cameraNear !== undefined) {
+      ssrAveragedMaterial.uniforms.cameraNear.value = camera.near;
+    }
+    if (ssrAveragedMaterial.uniforms.cameraFar !== undefined) {
+      ssrAveragedMaterial.uniforms.cameraFar.value = camera.far;
+    }
+    if (ssrAveragedMaterial.uniforms.resolution) {
+      ssrAveragedMaterial.uniforms.resolution.value.set(
+        window.innerWidth,
+        window.innerHeight
+      );
+    }
+
+    renderer.render(scene, camera);
+    renderer.render(ssrAveragedScene, ssrAveragedCamera);
+    return;
+  }
+
   // ----- Hybrid (Full-screen Ray Tracing) -----
   if (mode === 'Hybrid' && rtScene && raytracingMaterial) {
     const viewMatrix = camera.matrixWorldInverse.clone();
@@ -301,6 +372,9 @@ window.addEventListener('resize', () => {
 
   if (ssrMaterial && ssrMaterial.uniforms.resolution) {
     ssrMaterial.uniforms.resolution.value.set(w, h);
+  }
+  if (ssrAveragedMaterial && ssrAveragedMaterial.uniforms.resolution) {
+    ssrAveragedMaterial.uniforms.resolution.value.set(w, h);
   }
   if (raytracingMaterial && raytracingMaterial.uniforms.resolution) {
     raytracingMaterial.uniforms.resolution.value.set(w, h);
