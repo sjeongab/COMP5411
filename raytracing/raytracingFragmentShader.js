@@ -125,7 +125,7 @@ vec4 rayMarch(vec3 origin, vec3 dir) {
     vec3 rd = dir;
     float attenuation = 1.0;
 
-    const int MAX_BOUNCES = 3;
+    const int MAX_BOUNCES = 5;
     const int MAX_STEPS = 128;
     const float MAX_DIST = 500.0;
     const float SURF_EPS = 0.001;

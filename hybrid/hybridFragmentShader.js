@@ -129,7 +129,7 @@ const hybridFragmentShader = `
             vec3 rayOrigin = origin;
             vec3 rayDir = direction;
             float attenuation = 1.0;
-            const int maxBounces = 3;
+            const int maxBounces = 5;
 
             for(int bounce = 0; bounce < maxBounces; bounce++){
                 float t = 0.0;
@@ -183,17 +183,8 @@ const hybridFragmentShader = `
     }
 
 
-    void main() {
-        vec2 uv = (gl_FragCoord.xy / resolution) * 2.0 - 1.0;
+    void main() {     
         vec2 suv = gl_FragCoord.xy / resolution;
-        vec4 rayClip = vec4(uv, -1.0, 1.0);
-        vec4 rayEye = invViewProj * rayClip;
-        rayEye.xyz /= rayEye.w;
-        rayEye = vec4(rayEye.xy, -1.0, 0.0);
-        vec3 rayDir = normalize((uCamMatrix * vec4(rayEye.xyz, 0.0)).xyz);
-
-        vec3 result = rayMarch(cameraPos, rayDir);
-        
 
         float depth = texture2D(gDepth, suv).r;
         float reflectivity = texture2D(gReflection, suv).r;
@@ -201,8 +192,19 @@ const hybridFragmentShader = `
             FragColor = vec4(0.0, 0.0, 0.0, 0.0);
             return;
         }
+        else{
+            vec2 uv = (gl_FragCoord.xy / resolution) * 2.0 - 1.0;
+            vec4 rayClip = vec4(uv, -1.0, 1.0);
+            vec4 rayEye = invViewProj * rayClip;
+            rayEye.xyz /= rayEye.w;
+            rayEye = vec4(rayEye.xy, -1.0, 0.0);
+            vec3 rayDir = normalize((uCamMatrix * vec4(rayEye.xyz, 0.0)).xyz);
 
-        FragColor = vec4(result, 1.0);
+            vec3 result = rayMarch(cameraPos, rayDir);
+
+            FragColor = vec4(result, 1.0);
+            return;
+        }
     }
 `;
 
