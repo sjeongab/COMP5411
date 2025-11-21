@@ -19,14 +19,14 @@ function loadSSRMaterial(ssrCamera) {
         invViewProj: {value: new THREE.Matrix4()},
         viewProj: {value: new THREE.Matrix4()},
         
-        projectionMatrix: { value: ssrCamera.projectionMatrix },
-        inverseProjectionMatrix: { value: new THREE.Matrix4() },
-        inverseViewMatrix: { value: new THREE.Matrix4() },
+        //projectionMatrix: { value: ssrCamera.projectionMatrix },
+        //inverseProjectionMatrix: { value: new THREE.Matrix4() },
+        //inverseViewMatrix: { value: new THREE.Matrix4() },
         cameraPos: { value: ssrCamera.position },
-        cameraNear: { value: ssrCamera.near },
-        cameraFar: { value: ssrCamera.far },
+        //cameraNear: { value: ssrCamera.near },
+        //cameraFar: { value: ssrCamera.far },
         lightDir: { value: new THREE.Vector3(0.5, 0.7, 0.5).normalize() },
-        lightColor: { value: new THREE.Color(1.0, 1.0, 1.0) },
+        //lightColor: { value: new THREE.Color(1.0, 1.0, 1.0) },
 
         spheres: {
                     value: [

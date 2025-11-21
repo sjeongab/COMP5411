@@ -5,11 +5,9 @@ import {addSSRObjects} from '../object/addObjects.js'
 import { addSkyBox } from '../object/addSkyBox.js'
 import {loadSSRMaterial} from '../ssr/ssrBuffer.js'
 import {gBuffer} from '../gBuffer/gBuffer.js'
-import { createReflectivePlane } from '../plane/planeBuffer.js';
 
 let scene, camera, renderer;
 let isRunning = true;
-let reflectivePlaneMaterial = null;
 
 // Function to initialize the Three.js scene
 export function init(canvas) {
@@ -42,12 +40,7 @@ export function init(canvas) {
     // Add objects
     addSSRObjects(scene);
     addSkyBox(renderer, ssrScene);
-    const ambientLight = new THREE.AmbientLight(0x404040);
-    scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(5, 10, 7);
-    scene.add(directionalLight);
-    
+
     const ssrMaterial = loadSSRMaterial(camera);
     const postProcessQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ssrMaterial);   
     ssrScene.add(postProcessQuad);
@@ -61,10 +54,9 @@ export function init(canvas) {
       ssrMaterial.uniforms.uCamMatrix.value.copy(camera.matrixWorld);
       
       ssrMaterial.uniforms.invViewProj.value.copy(camera.projectionMatrix).invert();
-      ssrMaterial.uniforms.inverseProjectionMatrix.value.copy(camera.projectionMatrix).invert();
-      ssrMaterial.uniforms.inverseViewMatrix.value.copy(camera.matrixWorldInverse).invert();
       const viewMatrix = camera.matrixWorldInverse;
-      ssrMaterial.uniforms.cameraPos.value.copy(camera.position);const viewProj = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, viewMatrix);
+      ssrMaterial.uniforms.cameraPos.value.copy(camera.position);
+      const viewProj = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, viewMatrix);
       ssrMaterial.uniforms.viewProj.value.copy(viewProj);
 
 
@@ -76,7 +68,7 @@ export function init(canvas) {
       renderer.setRenderTarget(null);
       renderer.clear(true, true, true);
       //renderer.render(scene, camera);
-      for(let i = 0; i<4; i++){
+      for(let i = 0; i<1; i++){
         renderer.render(ssrScene, camera);
       }
 

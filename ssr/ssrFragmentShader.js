@@ -100,37 +100,23 @@ const ssrFragmentShader = `
 
         float intersect(vec3 pos, out vec3 hitColor, out float hitReflectivity, out vec3 hitSpec, out float hitShin) {
             float minDist = 1e10;
-            hitColor = vec3(0.0);
-            hitReflectivity = 0.0;
 
             for (int i = 0; i < 5; i++) {
                 float d = intersectSphere(pos, spheres[i].position, spheres[i].radius);
                 if (d < minDist){
                     minDist = d;
-                    hitColor = spheres[i].color;
-                    hitReflectivity = spheres[i].reflectivity;
-                    hitSpec = spheres[i].specular;
-                    hitShin = spheres[i].shininess;
                 }
             }
             for (int i=0; i < 3; i++){
                 float d = intersectBox(pos, boxes[i].position, boxes[i].scale);
                 if (d < minDist){
                     minDist = d;
-                    hitColor = boxes[i].color;
-                    hitReflectivity = boxes[i].reflectivity;
-                    hitSpec = boxes[i].specular;
-                    hitShin = boxes[i].shininess;
                 }
             }
 
             float d = intersectPlane(pos, planes[0].position, planes[0].scale);
             if (d < minDist){
                 minDist = d;
-                hitColor = planes[0].color;
-                hitReflectivity = planes[0].reflectivity;
-                hitSpec = planes[0].specular;
-                hitShin = planes[0].shininess;
             }
 
 
@@ -152,7 +138,7 @@ const ssrFragmentShader = `
                 float hitRefl = 0.0;
                 vec3 hitSpec = vec3(0.0);
                 float hitShin = 0.0;
-                for (int i = 0; i < 128; i++){
+                for (int i = 0; i < 70; i++){
                     vec3 pos = rayOrigin + t * rayDir;
                     float d = intersect(pos, hitColor, hitRefl, hitSpec, hitShin);
                     if (d < 0.01){
@@ -165,9 +151,7 @@ const ssrFragmentShader = `
                 }
                 if (!hit){
                     if(bounce == 0){
-                        vec2 uv = worldToUV(hitPos);
-                        finalColor = texture2D(gColor, uv).rgb;
-                        return vec4(finalColor, 0.0);
+                        return vec4(0.0, 0.0, 0.0, 0.0);
                     }
                     
                     
@@ -201,14 +185,12 @@ const ssrFragmentShader = `
                 
             }
         finalColor = mix(finalColor, vec3(0.2508), attenuation);
-
         return vec4(finalColor, 1.0);
     }
 
 
     void main() {
         vec2 uv = (gl_FragCoord.xy / resolution) * 2.0 - 1.0;
-        vec2 suv = gl_FragCoord.xy / resolution;
         vec4 rayClip = vec4(uv, -1.0, 1.0);
         vec4 rayEye = invViewProj * rayClip;
         rayEye.xyz /= rayEye.w;
