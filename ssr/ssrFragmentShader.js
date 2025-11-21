@@ -5,19 +5,18 @@ const ssrFragmentShader = `
 
         uniform sampler2D gColor;
         uniform sampler2D gNormal;
-        uniform sampler2D gPosition;
         uniform sampler2D gReflection;
         uniform sampler2D gDepth;
+
         uniform vec2 resolution;
 
         uniform vec3 lightDir;
-        uniform vec3 lightColor;
 
         uniform vec3 cameraPos;
         uniform mat4 viewProj;
         uniform mat4 invViewProj; // Inverse view-projection matrix for ray direction
 
-        uniform mat4  uCamMatrix;
+        uniform mat4  uCamMatrix; // TODO: rename uCamMatrix
 
         struct Ray {
             vec3 origin;

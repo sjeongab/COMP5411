@@ -12,8 +12,7 @@ function loadSSRAveragedMaterial(ssrCamera) {
     uniforms: {
         gColor: { value: gBuffer.textures[0] },
         gNormal: { value: gBuffer.textures[1] },
-        gPosition: { value: gBuffer.textures[2] },
-        gReflection: { value: gBuffer.textures[3] },
+        gReflection: { value: gBuffer.textures[2] },
         gDepth: { value: gBuffer.depthTexture },
         resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
         uCamMatrix: { value: ssrCamera.matrixWorld},

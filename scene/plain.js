@@ -66,7 +66,7 @@ export function init(canvas) {
     updateFPS(currentTime);
     cameraControls.update();
 
-    for(let i = 0; i<4; i++){
+    for(let i = 0; i<1; i++){
       renderer.render(scene, camera);
     }
     requestAnimationFrame(animate);

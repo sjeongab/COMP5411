@@ -41,7 +41,7 @@ export function init(canvas) {
 
     // Add objects
     addSSRObjects(scene);
-    addSkyBox(renderer, scene);
+    addSkyBox(renderer, ssrScene);
     const ambientLight = new THREE.AmbientLight(0x404040);
     scene.add(ambientLight);
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -75,7 +75,7 @@ export function init(canvas) {
       // Render the scene
       renderer.setRenderTarget(null);
       renderer.clear(true, true, true);
-      renderer.render(scene, camera);
+      //renderer.render(scene, camera);
       for(let i = 0; i<4; i++){
         renderer.render(ssrScene, camera);
       }

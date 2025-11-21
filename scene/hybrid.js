@@ -11,7 +11,7 @@ let isRunning = true;
 
 // Function to initialize the Three.js scene
 export function init(canvas) {
-  isRunning = true;
+    isRunning = true;
     // Set up the scene
     scene = new THREE.Scene();
     const ssrScene = new THREE.Scene();
@@ -40,11 +40,6 @@ export function init(canvas) {
     // Add objects
     addSSRObjects(scene);
     addSkyBox(renderer, scene);
-    const ambientLight = new THREE.AmbientLight(0x404040);
-    scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(5, 10, 7);
-    scene.add(directionalLight);
 
     const hybridMaterial = loadHybridMaterial(camera);
 

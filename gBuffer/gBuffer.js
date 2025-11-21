@@ -7,7 +7,7 @@ depthTexture.format = THREE.DepthFormat;
 depthTexture.type = THREE.UnsignedIntType;
 
 const gBuffer = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
-    count: 4,
+    count: 3,
     format: THREE.RGBAFormat,
     type: THREE.FloatType,
     minFilter: THREE.NearestFilter,
@@ -18,8 +18,7 @@ const gBuffer = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeigh
 
 gBuffer.textures[0].name = 'gColor';
 gBuffer.textures[1].name = 'gNormal';
-gBuffer.textures[2].name = 'gPosition';
-gBuffer.textures[3].name = 'gReflection';
+gBuffer.textures[2].name = 'gReflection';
 
 
 const gBufferMaterial = new THREE.ShaderMaterial({
