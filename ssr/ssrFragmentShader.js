@@ -26,8 +26,6 @@ const ssrFragmentShader = `
         struct Sphere {
             vec3 position;
             float radius;
-            vec3 color;
-            float reflectivity;
             vec3 specular;
             float shininess;
         };
@@ -35,8 +33,6 @@ const ssrFragmentShader = `
         struct Box {
             vec3 position;
             float scale;
-            vec3 color;
-            float reflectivity;
             vec3 specular;
             float shininess;
         };
@@ -45,8 +41,6 @@ const ssrFragmentShader = `
             vec3 position;
             vec3 normal;
             float offset;
-            vec3 color;
-            float reflectivity;
             float scale;
             vec3 specular;
             float shininess;
@@ -153,8 +147,6 @@ const ssrFragmentShader = `
                     if(bounce == 0){
                         return vec4(0.0, 0.0, 0.0, 0.0);
                     }
-                    
-                    
                 }
                 else{
                     vec2 uv = worldToUV(hitPos);
@@ -166,7 +158,7 @@ const ssrFragmentShader = `
 
                     vec3 normal = texture2D(gNormal, uv).rgb;
 
-                    if(hitShin > 0.0){
+                    if(hitShin > 0.0){ //import hitShin from gBuffer?
                         vec3 viewDir = normalize(cameraPos-hitPos);
                         vec3 reflectDir = reflect(-lightDir, normal);
                         float spec = max(dot(reflectDir, viewDir), 0.0);
