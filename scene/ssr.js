@@ -76,7 +76,9 @@ export function init(canvas) {
       renderer.setRenderTarget(null);
       renderer.clear(true, true, true);
       renderer.render(scene, camera);
-      renderer.render(ssrScene, camera);
+      for(let i = 0; i<4; i++){
+        renderer.render(ssrScene, camera);
+      }
 
       // Request the next animation frame
       requestAnimationFrame(animate);
