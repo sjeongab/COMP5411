@@ -1,12 +1,9 @@
-// raytracingBuffer.js
 import * as THREE from 'three';
 import { hybridVertexShader } from '../hybrid/hybridVertexShader.js';
 import { hybridFragmentShader } from '../hybrid/hybridFragmentShader.js';
 import {gBuffer} from '../gBuffer/gBuffer.js'
 
 function loadHybridMaterial(camera) {
-
-      
     const hybridMaterial = new THREE.ShaderMaterial({
     vertexShader: hybridVertexShader,
     fragmentShader: hybridFragmentShader,
@@ -21,6 +18,7 @@ function loadHybridMaterial(camera) {
         cameraPos: { value: camera.position},
         uCamMatrix: { value: camera.matrixWorld},
         invViewProj: {value: new THREE.Matrix4()},
+        viewProj: {value: new THREE.Matrix4()},
         spheres: {
             value: [
                 {

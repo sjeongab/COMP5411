@@ -1,10 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'OrbitControls';
-import {updateFPS} from '../fps.js';
-import { objects } from '../object/addObjects.js';
+import { TEST_FPS, updateFPS } from '../fps.js';
 import { loadRaytracingMaterial } from '../raytracing/raytracingBuffer.js';
-import { raytracingVertexShader } from '../raytracing/raytracingVertexShader.js';
-import { raytracingFragmentShader } from '../raytracing/raytracingFragmentShader.js';
 import { addSkyBox } from '../object/addSkyBox.js'
 
 
@@ -63,7 +60,7 @@ export function init(canvas){
 
         renderer.setRenderTarget(null);
         renderer.clear(true, true, true);
-        for(let i = 0; i<4; i++){
+        for(let i = 0; i<TEST_FPS; i++){
             renderer.render(scene, camera);
         }
 

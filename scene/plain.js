@@ -1,7 +1,7 @@
 // scene/plain.js
 import * as THREE from 'three';
 import { OrbitControls } from 'OrbitControls';
-import { updateFPS } from '../fps.js';
+import { TEST_FPS, updateFPS } from '../fps.js';
 import { addPlainObjects } from '../object/addObjects.js';
 import { addSkyBox } from '../object/addSkyBox.js';
 
@@ -66,7 +66,7 @@ export function init(canvas) {
     updateFPS(currentTime);
     cameraControls.update();
 
-    for(let i = 0; i<1; i++){
+    for(let i = 0; i<TEST_FPS; i++){
       renderer.render(scene, camera);
     }
     requestAnimationFrame(animate);

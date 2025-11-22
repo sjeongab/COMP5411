@@ -1,7 +1,7 @@
 // averagedSsr.js (New file for SSR_Averaged mode)
 import * as THREE from 'three';
 import { OrbitControls } from 'OrbitControls'
-import {updateFPS} from '../fps.js';
+import {TEST_FPS, updateFPS} from '../fps.js';
 import {addSSRObjects} from '../object/addObjects.js'
 import { addSkyBox } from '../object/addSkyBox.js'
 import {loadSSRAveragedMaterial} from '../ssr/ssrAveragedBuffer.js'
@@ -77,7 +77,9 @@ export function init(canvas) {
       renderer.setRenderTarget(null);
       renderer.clear(true, true, true);
       renderer.render(scene, camera);
-      renderer.render(ssrAveragedScene, camera);
+      for(let i = 0; i<TEST_FPS; i++){
+          renderer.render(ssrAveragedScene, camera);
+      }
 
       // Request the next animation frame
       requestAnimationFrame(animate);

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'OrbitControls'
-import {updateFPS} from '../fps.js';
+import {TEST_FPS, updateFPS} from '../fps.js';
 import {addSSRObjects} from '../object/addObjects.js'
 import { addSkyBox } from '../object/addSkyBox.js'
 import { loadHybridMaterial } from '../hybrid/hybridBuffer.js'
@@ -54,6 +54,8 @@ export function init(canvas) {
 
       hybridMaterial.uniforms.uCamMatrix.value.copy(camera.matrixWorld);
       hybridMaterial.uniforms.invViewProj.value.copy(camera.projectionMatrix).invert();
+      const viewProj = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+      hybridMaterial.uniforms.viewProj.value.copy(viewProj);
 
       renderer.setRenderTarget(gBuffer);
       renderer.clear(true, true, true);
@@ -63,12 +65,9 @@ export function init(canvas) {
       renderer.setRenderTarget(null);
       renderer.clear(true, true, true);
       renderer.render(scene, camera);
-      for(let i = 0; i<4; i++){
+      for(let i = 0; i<TEST_FPS; i++){
         renderer.render(ssrScene, camera);
       }
-      
-
-      // Request the next animation frame
       requestAnimationFrame(animate);
     };
 

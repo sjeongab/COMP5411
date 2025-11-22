@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'OrbitControls'
-import {updateFPS} from '../fps.js';
+import { TEST_FPS, updateFPS } from '../fps.js';
 import {addSSRObjects} from '../object/addObjects.js'
 import { addSkyBox } from '../object/addSkyBox.js'
 import {loadSSRMaterial} from '../ssr/ssrBuffer.js'
@@ -12,11 +12,9 @@ let isRunning = true;
 // Function to initialize the Three.js scene
 export function init(canvas) {
   isRunning = true;
-    // Set up the scene
     scene = new THREE.Scene();
     const ssrScene = new THREE.Scene();
 
-    // Set up the renderer
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.autoClear = false;
@@ -27,7 +25,7 @@ export function init(canvas) {
       renderer.outputEncoding = THREE.sRGBEncoding;
     }
 
-    // Set up the camera
+
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
     camera.position.set(0, 75, 160);
 
@@ -37,15 +35,13 @@ export function init(canvas) {
     cameraControls.minDistance = 10;
     cameraControls.update();
 
-    // Add objects
     addSSRObjects(scene);
-    addSkyBox(renderer, ssrScene);
+    addSkyBox(renderer, scene);
 
     const ssrMaterial = loadSSRMaterial(camera);
     const postProcessQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ssrMaterial);   
     ssrScene.add(postProcessQuad);
 
-    // Start the animation loop
     function animate(currentTime)  {
       if(!isRunning) return;
       updateFPS(currentTime);
@@ -64,25 +60,22 @@ export function init(canvas) {
       renderer.clear(true, true, true);
       renderer.render(scene, camera);
 
-      // Render the scene
       renderer.setRenderTarget(null);
       renderer.clear(true, true, true);
-      //renderer.render(scene, camera);
-      for(let i = 0; i<1; i++){
+      renderer.render(scene, camera);
+      for(let i = 0; i<TEST_FPS; i++){
         renderer.render(ssrScene, camera);
       }
 
-      // Request the next animation frame
       requestAnimationFrame(animate);
     };
 
-    requestAnimationFrame(animate); // Return the animation frame ID
+    requestAnimationFrame(animate);
 }
 
-// Function to clean up resources when switching scenes
+
 export function stop() {
     document.body.removeChild(document.body.lastElementChild);
     renderer.dispose();
     isRunning = false;
-    reflectivePlaneMaterial = null;
 }

@@ -3,7 +3,6 @@ import {ssrVertexShader} from './ssrVertexShader.js';
 import {ssrFragmentShader} from './ssrFragmentShader.js';
 import {gBuffer} from '../gBuffer/gBuffer.js';
 
-/* ---------------- SSR material ---------------- */
 function loadSSRMaterial(ssrCamera) {
     const ssrMaterial = new THREE.ShaderMaterial({
     vertexShader: ssrVertexShader,
@@ -18,15 +17,8 @@ function loadSSRMaterial(ssrCamera) {
         uCamMatrix: { value: ssrCamera.matrixWorld},
         invViewProj: {value: new THREE.Matrix4()},
         viewProj: {value: new THREE.Matrix4()},
-        
-        //projectionMatrix: { value: ssrCamera.projectionMatrix },
-        //inverseProjectionMatrix: { value: new THREE.Matrix4() },
-        //inverseViewMatrix: { value: new THREE.Matrix4() },
         cameraPos: { value: ssrCamera.position },
-        //cameraNear: { value: ssrCamera.near },
-        //cameraFar: { value: ssrCamera.far },
         lightDir: { value: new THREE.Vector3(0.5, 0.7, 0.5).normalize() },
-        //lightColor: { value: new THREE.Color(1.0, 1.0, 1.0) },
 
         spheres: {
                     value: [

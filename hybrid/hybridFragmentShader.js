@@ -3,6 +3,7 @@ const hybridFragmentShader = `
 
         precision highp float;
 
+        uniform sampler2D gColor;
         uniform sampler2D gReflection;
         uniform sampler2D gDepth;
         uniform vec2 resolution;
@@ -12,6 +13,7 @@ const hybridFragmentShader = `
 
         uniform vec3 cameraPos;
         uniform mat4 invViewProj; // Inverse view-projection matrix for ray direction
+        uniform mat4 viewProj;
 
         uniform mat4  uCamMatrix; // TODO: change name
 
@@ -41,7 +43,6 @@ const hybridFragmentShader = `
         struct Plane{
             vec3 position;
             vec3 normal;
-            float offset;
             vec3 color;
             float reflectivity;
             float scale;
@@ -54,6 +55,31 @@ const hybridFragmentShader = `
         uniform Plane planes[1];
 
         out vec4 FragColor;
+
+        vec2 worldToUV(vec3 worldPos) {
+            // Transform to clip space
+            vec4 clip = viewProj * vec4(worldPos, 1.0);
+            // Alternative if using viewProj: vec4 clip = viewProj * vec4(worldPos, 1.0);
+            
+            // Perspective divide to NDC [-1,1]
+            vec3 ndc = clip.xyz / clip.w;
+            
+            // Check if point is in front of camera (optional: discard invalid)
+            if (ndc.z < -1.0 || ndc.z > 1.0) {
+                return vec2(-1.0); // Invalid (behind camera or out of range); handle in caller (e.g., skip sampling)
+            }
+            
+            // Map to UV [0,1] (bottom-left origin)
+            vec2 uv = ndc.xy * 0.5 + 0.5;
+            
+            // Clamp to [0,1] to avoid out-of-bounds sampling
+            uv = clamp(uv, 0.0, 1.0);
+            
+            // Optional: Flip y for top-left origin (e.g., some UI systems)
+            // uv.y = 1.0 - uv.y;
+            
+            return uv;
+        }
 
         float intersectSphere(vec3 pos, vec3 center, float radius) {
             return length(pos - center) - radius;
@@ -136,6 +162,8 @@ const hybridFragmentShader = `
                 float hitRefl = 0.0;
                 vec3 hitSpec = vec3(0.0);
                 float hitShin = 0.0;
+                
+                
                 for (int i = 0; i < 128; i++){
                     vec3 pos = rayOrigin + t * rayDir;
                     float d = intersect(pos, hitColor, hitRefl, hitSpec, hitShin);
@@ -182,10 +210,9 @@ const hybridFragmentShader = `
 
     void main() {     
         vec2 suv = gl_FragCoord.xy / resolution;
-
         float depth = texture2D(gDepth, suv).r;
         float reflectivity = texture2D(gReflection, suv).r;
-        if (depth >= 0.9999 || reflectivity < 0.1){
+        if (depth < 0.01 || reflectivity < 0.1){
             FragColor = vec4(0.0, 0.0, 0.0, 0.0);
             return;
         }
