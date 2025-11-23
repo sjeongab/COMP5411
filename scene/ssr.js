@@ -11,7 +11,7 @@ let isRunning = true;
 
 // Function to initialize the Three.js scene
 export function init(canvas) {
-  isRunning = true;
+    isRunning = true;
     scene = new THREE.Scene();
     const ssrScene = new THREE.Scene();
 
@@ -19,11 +19,11 @@ export function init(canvas) {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.autoClear = false;
     document.body.appendChild(renderer.domElement);
-    if ('outputColorSpace' in renderer) {
+    /*if ('outputColorSpace' in renderer) {
       renderer.outputColorSpace = THREE.SRGBColorSpace;
     } else if ('outputEncoding' in renderer) {
       renderer.outputEncoding = THREE.sRGBEncoding;
-    }
+    }*/
 
 
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
@@ -57,15 +57,16 @@ export function init(canvas) {
 
 
       renderer.setRenderTarget(gBuffer);
-      renderer.clear(true, true, true);
+      renderer.clear();
       renderer.render(scene, camera);
 
       renderer.setRenderTarget(null);
-      renderer.clear(true, true, true);
+      renderer.clear(true, false, false);
       renderer.render(scene, camera);
       for(let i = 0; i<TEST_FPS; i++){
         renderer.render(ssrScene, camera);
       }
+
 
       requestAnimationFrame(animate);
     };

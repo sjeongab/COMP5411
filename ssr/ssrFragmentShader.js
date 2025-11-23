@@ -117,12 +117,18 @@ const ssrFragmentShader = `
             return minDist;
         }
 
+        float linearDepth(float z, float near, float far) {
+            float zNDC = z * 2.0 - 1.0;
+            return (2.0 * near * far) / (far + near - zNDC * (far - near));
+        }
+
         vec4 rayMarch(vec3 origin, vec3 direction) {
             vec3 finalColor = vec3(0.0);
             vec3 rayOrigin = origin;
             vec3 rayDir = direction;
             float attenuation = 1.0;
             const int maxBounces = 2;
+
 
             for(int bounce = 0; bounce < maxBounces; bounce++){
                 float t = 0.0;
@@ -132,10 +138,20 @@ const ssrFragmentShader = `
                 float hitRefl = 0.0;
                 vec3 hitSpec = vec3(0.0);
                 float hitShin = 0.0;
+
                 for (int i = 0; i < 70; i++){
-                    vec3 pos = rayOrigin + t * rayDir;
+                    vec3 pos = rayOrigin + t * rayDir; //TODO: Primary check at the main
+                    if(bounce > 0){
+                    vec2 uv = worldToUV(pos);
+                    float depth = texture2D(gDepth, uv).r;
+                    float linearDepth = linearDepth(depth, 1.0, 500.0);
+                    float z = (linearDepth - 1.0) / (500.0 - 1.0);
+                    if (z >= 1.0){
+                        break;
+                    }
+                    }
                     float d = intersect(pos, hitColor, hitRefl, hitSpec, hitShin);
-                    if (d < 0.01){
+                    if (d < 0.001){
                         hitPos = pos;
                         hit = true;
                         break;
@@ -180,6 +196,7 @@ const ssrFragmentShader = `
         return vec4(finalColor, 1.0);
     }
 
+    
 
     void main() {
         vec2 uv = (gl_FragCoord.xy / resolution) * 2.0 - 1.0;
@@ -190,7 +207,16 @@ const ssrFragmentShader = `
         vec3 rayDir = normalize((uCamMatrix * vec4(rayEye.xyz, 0.0)).xyz);
 
         vec4 result = rayMarch(cameraPos, rayDir);
+
+
+        vec2 suv = gl_FragCoord.xy / resolution;
+        float depth = texture2D(gDepth, suv).r;
+        float linearDepth = linearDepth(depth, 1.0, 500.0);
+        float z = (linearDepth - 1.0) / (500.0 - 1.0);
+        
         FragColor = result;
+        //depth = 500.0 / (500.0 - depth * 499.0);
+        //FragColor= vec4(z, 0.0, 0.0, 1.0);
     }
 `;
 
