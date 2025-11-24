@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import {gBufferMaterial} from '../gBuffer/gBuffer.js'
 
 function addPlane(scene, config) {
-    const planeGeometry = new THREE.PlaneGeometry(200, 200); // Width, Height
+    const planeGeometry = new THREE.PlaneGeometry(200, 200);
       const planeGbufferMaterial = new THREE.ShaderMaterial({
           uniforms: {
               uColor: { value: config.color},

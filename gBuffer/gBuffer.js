@@ -6,7 +6,7 @@ const depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeigh
 depthTexture.format = THREE.DepthFormat;
 depthTexture.type = THREE.UnsignedIntType;
 
-const gBuffer = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+var gBuffer = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
     count: 3,
     format: THREE.RGBAFormat,
     type: THREE.FloatType,
@@ -30,5 +30,9 @@ const gBufferMaterial = new THREE.ShaderMaterial({
             uReflectivity: { value: 0.0 },
     },
 });
+
+gBufferMaterial.depthWrite = true;
+gBufferMaterial.depthTest = true;
+gBufferMaterial.transparent = false;
 
 export {gBuffer, gBufferMaterial};
