@@ -15,17 +15,15 @@ const gBufferFragmentShader = `
     layout(location = 2) out float gReflection;
 
     void main() {
-        vec3 lightPos = vec3(5, 10, 7);
-
-        vec3 ambientColor = vec3(0.25098, 0.25098, 0.25098); // TODO: import ambientColor as uniform
-        vec3 ambient = ambientColor*uColor;
-
         vec3 normal = normalize(vNormal);
 
-        
+        vec3 ambientColor = vec3(0.25098, 0.25098, 0.25098);
+        vec3 ambient = ambientColor*uColor;
+
+        vec3 lightPos = vec3(5, 10, 7);
         vec3 lightDirection = normalize(lightPos - vWorldPosition);
         float diff = max(dot(normal, lightDirection), 0.0);
-        vec3 diffuse = uColor * diff;
+        vec3 diffuse = uColor * diff;   
 
         vec3 final = (ambient + diffuse);
         gColor = vec4(final, 1.0);
