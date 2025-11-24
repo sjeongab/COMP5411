@@ -1,7 +1,7 @@
 
 import * as THREE from 'three'
 
-function addSkyBox(renderer, skyboxScene) {
+function addSkyBox(skyboxScene) {
     const cubeUrls = [
       'https://threejs.org/examples/textures/cube/Park3Med/px.jpg', // +X
       'https://threejs.org/examples/textures/cube/Park3Med/nx.jpg', // -X
@@ -20,14 +20,13 @@ function addSkyBox(renderer, skyboxScene) {
       (progress) => console.log('[skybox] Loading progress:', progress),
       (err) => console.error('[skybox] Failed to load:', err)
     );
-    // Correct cube texture color space
+
     if ('SRGBColorSpace' in THREE) {
     skyboxTexture.colorSpace = THREE.SRGBColorSpace;
     } else if ('sRGBEncoding' in THREE) {
     skyboxTexture.encoding = THREE.sRGBEncoding;
     }
 
-    // Use Three.js built-in cube shader for skybox
     const skyboxMaterial = new THREE.ShaderMaterial({
     uniforms: THREE.UniformsUtils.clone(THREE.ShaderLib.cube.uniforms),
     vertexShader: THREE.ShaderLib.cube.vertexShader,
@@ -37,12 +36,10 @@ function addSkyBox(renderer, skyboxScene) {
     });
     skyboxMaterial.uniforms.tCube.value = skyboxTexture;
 
-    // Large cube for skybox background
     const skyboxGeometry = new THREE.BoxGeometry(1000, 1000, 1000);
     const skyboxMesh = new THREE.Mesh(skyboxGeometry, skyboxMaterial);
     skyboxScene.add(skyboxMesh);
 
-    // Follow camera position to keep skybox around camera
     skyboxMesh.onBeforeRender = function (_scene, cam) {
       this.position.copy(cam.position);
     };

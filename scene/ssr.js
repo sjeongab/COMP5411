@@ -30,7 +30,7 @@ export function init(canvas) {
     cameraControls.update();
 
     addSSRObjects(scene);
-    addSkyBox(renderer, scene);
+    addSkyBox(scene);
 
     const ssrMaterial = loadSSRMaterial(camera);
     const postProcessQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ssrMaterial);   

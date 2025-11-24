@@ -39,7 +39,7 @@ export function init(canvas) {
 
     // Add objects
     addSSRObjects(scene);
-    addSkyBox(renderer, scene);
+    addSkyBox(scene);
 
     const hybridMaterial = loadHybridMaterial(camera);
 

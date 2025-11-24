@@ -25,7 +25,7 @@ export function init(canvas){
     cameraControls.minDistance = 10;
     cameraControls.update();
 
-    addSkyBox(renderer, scene);
+    addSkyBox(scene);
 
     const rayTraceMaterial = loadRaytracingMaterial(camera);
     
