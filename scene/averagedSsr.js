@@ -6,11 +6,9 @@ import {addSSRObjects} from '../object/addObjects.js'
 import { addSkyBox } from '../object/addSkyBox.js'
 import {loadSSRAveragedMaterial} from '../ssr/ssrAveragedBuffer.js'
 import {gBuffer} from '../gBuffer/gBuffer.js'
-import { createReflectivePlane } from '../plane/planeBuffer.js';
 
 let scene, camera, renderer;
 let isRunning = true;
-let reflectivePlaneMaterial = null;
 
 // Function to initialize the Three.js scene
 export function init(canvas) {
@@ -93,5 +91,4 @@ export function stop() {
     document.body.removeChild(document.body.lastElementChild);
     renderer.dispose();
     isRunning = false;
-    reflectivePlaneMaterial = null;
 }

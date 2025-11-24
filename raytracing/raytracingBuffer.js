@@ -7,9 +7,7 @@ function loadRaytracingMaterial(camera) {
 
   return new THREE.ShaderMaterial({
     uniforms: {
-        // Camera properties
         cameraPos: { value: camera.position },
-        uCamMatrix: { value: camera.matrixWorld},
         invViewProj: { value: new THREE.Matrix4()},
         resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
 
@@ -98,17 +96,16 @@ function loadRaytracingMaterial(camera) {
             ]
 
         },
-    
-        
-        // Lighting (from earlier shaders)
         lightDir: { value: new THREE.Vector3(0.5, 0.7, 0.5).normalize() },
         lightColor: { value: new THREE.Color(1.0, 1.0, 1.0) },
-        //ambientColor: { value: new THREE.Color(0x404040) },
     },
     vertexShader: raytracingVertexShader,
     fragmentShader: raytracingFragmentShader,
     glslVersion: THREE.GLSL3,
-    side: THREE.DoubleSide
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    blending: THREE.NormalBlending
     });
 }
 

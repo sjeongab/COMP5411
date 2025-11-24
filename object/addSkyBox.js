@@ -43,8 +43,8 @@ function addSkyBox(renderer, skyboxScene) {
     skyboxScene.add(skyboxMesh);
 
     // Follow camera position to keep skybox around camera
-    skyboxMesh.onBeforeRender = function (renderer, _scene, cam) {
-    this.position.copy(cam.position);
+    skyboxMesh.onBeforeRender = function (_scene, cam) {
+      this.position.copy(cam.position);
     };
 }
 

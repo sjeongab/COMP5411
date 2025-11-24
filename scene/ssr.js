@@ -19,12 +19,6 @@ export function init(canvas) {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.autoClear = false;
     document.body.appendChild(renderer.domElement);
-    /*if ('outputColorSpace' in renderer) {
-      renderer.outputColorSpace = THREE.SRGBColorSpace;
-    } else if ('outputEncoding' in renderer) {
-      renderer.outputEncoding = THREE.sRGBEncoding;
-    }*/
-
 
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
     camera.position.set(0, 75, 160);

@@ -44,7 +44,6 @@ uniform Plane planes[1];
 
 out vec4 FragColor;
 
-// --------- SDF ها ----------
 float sdSphere(vec3 p, float r) {
     return length(p) - r;
 }
@@ -54,13 +53,11 @@ float sdBox(vec3 p, vec3 b) {
     return length(max(d, 0.0)) + min(max(d.x, max(d.y, d.z)), 0.0);
 }
 
-// صحنه: کمترین فاصله + رنگ/رفلکت
 float mapScene(vec3 pos, out vec3 hitColor, out float hitReflectivity, out vec3 hitSpec, out float hitShin) {
     float minDist = 1e10;
     hitColor = vec3(0.0);
     hitReflectivity = 0.0;
 
-    // spheres
     for (int i = 0; i < 5; i++) {
         float d = sdSphere(pos - spheres[i].position, spheres[i].radius);
         if (d < minDist) {
@@ -72,7 +69,6 @@ float mapScene(vec3 pos, out vec3 hitColor, out float hitReflectivity, out vec3 
         }
     }
 
-    // boxes
     for (int i = 0; i < 3; i++) {
         float d = sdBox(pos - boxes[i].position, vec3(boxes[i].scale * 0.5));
         if (d < minDist) {
@@ -84,7 +80,6 @@ float mapScene(vec3 pos, out vec3 hitColor, out float hitReflectivity, out vec3 
         }
     }
 
-    // plane به صورت باکس خیلی نازک بزرگ
     {
         vec3 halfSize = vec3(planes[0].scale * 0.5, 0.01, planes[0].scale * 0.5);
         float d = sdBox(pos - planes[0].position, halfSize);
@@ -100,7 +95,6 @@ float mapScene(vec3 pos, out vec3 hitColor, out float hitReflectivity, out vec3 
     return minDist;
 }
 
-// تخمین نرمال با مشتق عددی روی SDF
 vec3 estimateNormal(vec3 pos) {
     vec3 dummyColor;
     float dummyRefl;
@@ -118,7 +112,6 @@ vec3 estimateNormal(vec3 pos) {
     return normalize(vec3(dx, dy, dz));
 }
 
-// --------- Ray Marching ----------
 vec4 rayMarch(vec3 origin, vec3 dir) {
     vec3 col = vec3(0.0);
     vec3 ro = origin;
@@ -150,12 +143,11 @@ vec4 rayMarch(vec3 origin, vec3 dir) {
             t += d;
             if (t > MAX_DIST) break;
         }
-
-        if (!hit) {
+        if(!hit){
             if(bounce==0){
                 return vec4(0.0);
             }
-            col += vec3(0.25098, 0.25098, 0.25098) * attenuation; // پس‌زمینه
+            col += vec3(0.2598) * attenuation;
             break;
         }
 
@@ -200,7 +192,7 @@ void main() {
     vec3 rd = normalize(worldFar.xyz - ro);
 
     vec4 color = rayMarch(ro, rd);
-    FragColor = color;//vec4(color, 1.0);
+    FragColor = color;
 }
 `;
 

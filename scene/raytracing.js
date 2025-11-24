@@ -15,7 +15,6 @@ export function init(canvas){
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
-    renderer.autoClear = false;
 
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 500);
     camera.position.set(0, 75, 160);
@@ -28,16 +27,13 @@ export function init(canvas){
 
     addSkyBox(renderer, scene);
 
-    // Custom shader for ray tracing
     const rayTraceMaterial = loadRaytracingMaterial(camera);
     
-
-    // Create the quad mesh
     const quadGeometry = new THREE.PlaneGeometry(2, 2);
     const quad = new THREE.Mesh(quadGeometry, rayTraceMaterial);
     scene.add(quad);
 
-    // Handle window resize
+
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
@@ -45,22 +41,17 @@ export function init(canvas){
         rayTraceMaterial.uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
     });
 
-    // Animate loop
     function animate(currentTime) {
         if(!isRunning) return;
         updateFPS(currentTime);
         cameraControls.update();
 
         rayTraceMaterial.uniforms.cameraPos.value.copy(camera.position);
-        rayTraceMaterial.uniforms.uCamMatrix.value.copy(camera.matrixWorld);
-
         const viewMatrix = camera.matrixWorldInverse;
         const viewProj = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, viewMatrix);
         rayTraceMaterial.uniforms.invViewProj.value.copy(viewProj.invert());
 
-        renderer.setRenderTarget(null);
-        renderer.clear(true, true, true);
-        for(let i = 0; i<TEST_FPS; i++){
+        for(let i = 0; i < TEST_FPS; i++){
             renderer.render(scene, camera);
         }
 
@@ -69,7 +60,6 @@ export function init(canvas){
     animate();
 }
 
-// Function to clean up resources when switching scenes
 export function stop() {
     document.body.removeChild(document.body.lastElementChild);
     renderer.dispose();
