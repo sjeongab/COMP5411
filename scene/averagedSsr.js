@@ -1,7 +1,7 @@
 // averagedSsr.js (New file for SSR_Averaged mode)
 import * as THREE from 'three';
 import { OrbitControls } from 'OrbitControls'
-import {TEST_FPS, updateFPS} from '../fps.js';
+import {TEST_FPS, updateFPS} from '../helper/fps.js';
 import {addSSRObjects} from '../object/addObjects.js'
 import { addSkyBox } from '../object/addSkyBox.js'
 import {loadSSRAveragedMaterial} from '../ssr/ssrAveragedBuffer.js'

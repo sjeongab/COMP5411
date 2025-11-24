@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'OrbitControls'
-import { TEST_FPS, updateFPS } from '../fps.js';
+import { TEST_FPS, updateFPS } from '../helper/fps.js';
 import {addSSRObjects} from '../object/addObjects.js'
 import { addSkyBox } from '../object/addSkyBox.js'
 import {loadSSRMaterial} from '../ssr/ssrBuffer.js'
