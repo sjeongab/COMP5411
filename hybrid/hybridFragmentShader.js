@@ -140,9 +140,13 @@ const hybridFragmentShader = `
             vec3 rayOrigin = origin;
             vec3 rayDir = direction;
             float attenuation = 1.0;
-            const int maxBounces = 5;
 
-            for(int bounce = 0; bounce < maxBounces; bounce++){
+            const int MAX_BOUNCES = 5;
+            const int MAX_STEPS = 70;
+            const float MAX_DIST = 500.0;
+            const float SURF_EPS = 0.001;
+
+            for(int bounce = 0; bounce < MAX_BOUNCES; bounce++){
                 float t = 0.0;
                 bool hit = false;
                 vec3 hitPos = vec3(0.0);
@@ -152,18 +156,18 @@ const hybridFragmentShader = `
                 float hitShin = 0.0;
                 
                 
-                for (int i = 0; i < 70; i++){
+                for (int i = 0; i < MAX_STEPS; i++){
                     vec3 pos = rayOrigin + t * rayDir;
                     float d = intersect(pos, hitColor, hitRefl, hitSpec, hitShin);
-                    if (d < 0.001){
+                    if (d < SURF_EPS){
                         hitPos = pos;
                         hit = true;
                         break;
                     }
                     t += d;
-                    if (t > 500.0) break;
+                    if (t > MAX_DIST) break;
                 }
-                    
+
                 if (!hit){
                     finalColor += vec3(0.25098, 0.25098, 0.25098) * attenuation;
                     break;
