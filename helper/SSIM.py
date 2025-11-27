@@ -10,6 +10,3 @@ for i in imgs:
 
     score, diff = ssim(img_ref, img_test, channel_axis=-1, full=True, data_range=np.max(img_ref) - np.min(img_ref),)
     print("mode: ", i, "SSIM:", score)
- 
-# Optional: save or visualize the difference map
-#io.imsave("ssim_diff.png", (diff - diff.min()) / (diff.max() - diff.min()))

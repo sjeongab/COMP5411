@@ -9,14 +9,13 @@ function loadHybridMaterial(camera) {
     fragmentShader: hybridFragmentShader,
     glslVersion: THREE.GLSL3,
     uniforms: {
-        gColor: { value: gBuffer.textures[0] },
         gNormal: { value: gBuffer.textures[1] },
         gReflection: { value: gBuffer.textures[2] },
         gDepth: { value: gBuffer.depthTexture },
         resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
 
         cameraPos: { value: camera.position},
-        uCamMatrix: { value: camera.matrixWorld},
+        cameraMatrix: { value: camera.matrixWorld},
         invViewProj: {value: new THREE.Matrix4()},
         viewProj: {value: new THREE.Matrix4()},
         spheres: {

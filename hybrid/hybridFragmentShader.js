@@ -3,7 +3,6 @@ const hybridFragmentShader = `
 
         precision highp float;
 
-        uniform sampler2D gColor;
         uniform sampler2D gReflection;
         uniform sampler2D gDepth;
         uniform vec2 resolution;
@@ -12,10 +11,9 @@ const hybridFragmentShader = `
         uniform vec3 lightColor;
 
         uniform vec3 cameraPos;
-        uniform mat4 invViewProj; // Inverse view-projection matrix for ray direction
+        uniform mat4 cameraMatrix;
+        uniform mat4 invViewProj;
         uniform mat4 viewProj;
-
-        uniform mat4  uCamMatrix; // TODO: change name
 
         struct Ray {
             vec3 origin;
@@ -57,26 +55,16 @@ const hybridFragmentShader = `
         out vec4 FragColor;
 
         vec2 worldToUV(vec3 worldPos) {
-            // Transform to clip space
             vec4 clip = viewProj * vec4(worldPos, 1.0);
-            // Alternative if using viewProj: vec4 clip = viewProj * vec4(worldPos, 1.0);
-            
-            // Perspective divide to NDC [-1,1]
+
             vec3 ndc = clip.xyz / clip.w;
-            
-            // Check if point is in front of camera (optional: discard invalid)
+
             if (ndc.z < -1.0 || ndc.z > 1.0) {
-                return vec2(-1.0); // Invalid (behind camera or out of range); handle in caller (e.g., skip sampling)
+                return vec2(-1.0);
             }
-            
-            // Map to UV [0,1] (bottom-left origin)
+
             vec2 uv = ndc.xy * 0.5 + 0.5;
-            
-            // Clamp to [0,1] to avoid out-of-bounds sampling
             uv = clamp(uv, 0.0, 1.0);
-            
-            // Optional: Flip y for top-left origin (e.g., some UI systems)
-            // uv.y = 1.0 - uv.y;
             
             return uv;
         }
@@ -164,7 +152,7 @@ const hybridFragmentShader = `
                 float hitShin = 0.0;
                 
                 
-                for (int i = 0; i < 128; i++){
+                for (int i = 0; i < 70; i++){
                     vec3 pos = rayOrigin + t * rayDir;
                     float d = intersect(pos, hitColor, hitRefl, hitSpec, hitShin);
                     if (d < 0.001){
@@ -175,6 +163,7 @@ const hybridFragmentShader = `
                     t += d;
                     if (t > 500.0) break;
                 }
+                    
                 if (!hit){
                     finalColor += vec3(0.25098, 0.25098, 0.25098) * attenuation;
                     break;
@@ -183,7 +172,7 @@ const hybridFragmentShader = `
                 vec3 L = normalize(lightDir);
                 vec3 normal = estimateNormal(hitPos);
                 float diff = max(dot(normal, L), 0.0);
-                vec3 lighting = hitColor * (0.1 + diff * lightColor); // Ambient
+                vec3 lighting = hitColor * (0.1 + diff * lightColor);
                 
                 if(hitShin > 0.0){
                     vec3 V = normalize(cameraPos - hitPos);
@@ -191,18 +180,14 @@ const hybridFragmentShader = `
                     float spec = pow(max(dot(R, V), 0.0), hitShin);
                     lighting += hitSpec * spec;  
                 }
-                // Add to final color
-                finalColor += lighting * attenuation * (1.0 - hitRefl);
 
-                
-                // If not reflective, stop
+                finalColor += lighting * attenuation * (1.0 - hitRefl);          
+               
                 if (hitRefl < 0.1) break;
                 
-                // Prepare next reflection bounce
                 rayDir = reflect(rayDir, normal);
-                rayOrigin = hitPos + normal * 0.01; // Offset
-                attenuation *= hitRefl; // Attenuate by reflectivity
-                
+                rayOrigin = hitPos + normal * 0.01;
+                attenuation *= hitRefl; 
             }
         return finalColor;
     }
@@ -222,7 +207,7 @@ const hybridFragmentShader = `
             vec4 rayEye = invViewProj * rayClip;
             rayEye.xyz /= rayEye.w;
             rayEye = vec4(rayEye.xy, -1.0, 0.0);
-            vec3 rayDir = normalize((uCamMatrix * vec4(rayEye.xyz, 0.0)).xyz);
+            vec3 rayDir = normalize((cameraMatrix * vec4(rayEye.xyz, 0.0)).xyz);
 
             vec3 result = rayMarch(cameraPos, rayDir);
 

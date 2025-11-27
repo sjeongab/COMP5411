@@ -52,7 +52,7 @@ export function init(canvas) {
       updateFPS(currentTime);
       cameraControls.update();
 
-      hybridMaterial.uniforms.uCamMatrix.value.copy(camera.matrixWorld);
+      hybridMaterial.uniforms.cameraMatrix.value.copy(camera.matrixWorld);
       hybridMaterial.uniforms.invViewProj.value.copy(camera.projectionMatrix).invert();
       const viewProj = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
       hybridMaterial.uniforms.viewProj.value.copy(viewProj);
