@@ -152,7 +152,7 @@ const ssrFragmentShader = `
                 }
                 if (!hit){
                     if(bounce == 0){
-                        return vec4(0.0, 0.0, 0.0, 0.0);
+                        return vec4(0.0);
                     }
                 }
                 else{

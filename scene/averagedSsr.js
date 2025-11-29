@@ -57,7 +57,7 @@ export function init(canvas) {
       updateFPS(currentTime);
       cameraControls.update();
 
-      ssrAveragedMaterial.uniforms.uCamMatrix.value.copy(camera.matrixWorld);
+      ssrAveragedMaterial.uniforms.cameraMatrix.value.copy(camera.matrixWorld);
       
       ssrAveragedMaterial.uniforms.invViewProj.value.copy(camera.projectionMatrix).invert();
       ssrAveragedMaterial.uniforms.inverseProjectionMatrix.value.copy(camera.projectionMatrix).invert();

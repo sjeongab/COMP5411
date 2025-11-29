@@ -7,17 +7,18 @@ const ssrAveragedFragmentShader = `
         uniform sampler2D gNormal;
         uniform sampler2D gPosition;
         uniform sampler2D gReflection;
+        uniform sampler2D gShininess;
+        uniform sampler2D gSpecular;
         uniform sampler2D gDepth;
         uniform vec2 resolution;
 
         uniform vec3 lightDir;
-        uniform vec3 lightColor;
 
         uniform vec3 cameraPos;
+        uniform mat4 cameraMatrix;
         uniform mat4 viewProj;
-        uniform mat4 invViewProj; // Inverse view-projection matrix for ray direction
+        uniform mat4 invViewProj;
 
-        uniform mat4  uCamMatrix;
 
         struct Ray {
             vec3 origin;
@@ -27,30 +28,18 @@ const ssrAveragedFragmentShader = `
         struct Sphere {
             vec3 position;
             float radius;
-            vec3 color;
-            float reflectivity;
-            vec3 specular;
-            float shininess;
         };
 
         struct Box {
             vec3 position;
             float scale;
-            vec3 color;
-            float reflectivity;
-            vec3 specular;
-            float shininess;
         };
 
         struct Plane{
             vec3 position;
             vec3 normal;
             float offset;
-            vec3 color;
-            float reflectivity;
             float scale;
-            vec3 specular;
-            float shininess;
         };
 
 
@@ -58,32 +47,23 @@ const ssrAveragedFragmentShader = `
         uniform Box boxes[3];
         uniform Plane planes[1];
 
-        layout(location = 0) out vec4 FragColor; // Add this to fix GL_INVALID_OPERATION error
+        layout(location = 0) out vec4 FragColor;
 
         vec2 worldToUV(vec3 worldPos) {
-            // Transform to clip space
             vec4 clip = viewProj * vec4(worldPos, 1.0);
-            // Alternative if using viewProj: vec4 clip = viewProj * vec4(worldPos, 1.0);
-            
-            // Perspective divide to NDC [-1,1]
+
             vec3 ndc = clip.xyz / clip.w;
-            
-            // Check if point is in front of camera (optional: discard invalid)
+
             if (ndc.z < -1.0 || ndc.z > 1.0) {
-                return vec2(-1.0); // Invalid (behind camera or out of range); handle in caller (e.g., skip sampling)
+                return vec2(-1.0);
             }
-            
-            // Map to UV [0,1] (bottom-left origin)
+
             vec2 uv = ndc.xy * 0.5 + 0.5;
-            
-            // Clamp to [0,1] to avoid out-of-bounds sampling
             uv = clamp(uv, 0.0, 1.0);
-            
-            // Optional: Flip y for top-left origin (e.g., some UI systems)
-            // uv.y = 1.0 - uv.y;
             
             return uv;
         }
+
 
         // Gaussian function for weighting (add this for better quality)
         float gaussian(float x, float sigma) {
@@ -131,43 +111,40 @@ const ssrAveragedFragmentShader = `
             return length(max(dist, 0.0)) + min(max(dist.x, max(dist.y, dist.z)), 0.0);
         }
 
-        float intersect(vec3 pos, out vec3 hitColor, out float hitReflectivity, out vec3 hitSpec, out float hitShin) {
+        float intersect(vec3 pos) {
             float minDist = 1e10;
-            hitColor = vec3(0.0);
-            hitReflectivity = 0.0;
 
             for (int i = 0; i < 5; i++) {
                 float d = intersectSphere(pos, spheres[i].position, spheres[i].radius);
                 if (d < minDist){
                     minDist = d;
-                    hitColor = spheres[i].color;
-                    hitReflectivity = spheres[i].reflectivity;
-                    hitSpec = spheres[i].specular;
-                    hitShin = spheres[i].shininess;
                 }
             }
             for (int i=0; i < 3; i++){
                 float d = intersectBox(pos, boxes[i].position, boxes[i].scale);
                 if (d < minDist){
                     minDist = d;
-                    hitColor = boxes[i].color;
-                    hitReflectivity = boxes[i].reflectivity;
-                    hitSpec = boxes[i].specular;
-                    hitShin = boxes[i].shininess;
                 }
             }
 
             float d = intersectPlane(pos, planes[0].position, planes[0].scale);
             if (d < minDist){
                 minDist = d;
-                hitColor = planes[0].color;
-                hitReflectivity = planes[0].reflectivity;
-                hitSpec = planes[0].specular;
-                hitShin = planes[0].shininess;
             }
 
-
             return minDist;
+        }
+
+        float linearDepth(float z) {
+            float zNDC = z * 2.0 - 1.0;
+            zNDC = (2.0 * 1.0 * 500.0) / (500.0 + 1.0 - zNDC * (500.0 - 1.0));
+            return (zNDC - 1.0) / (500.0 - 1.0);
+        }
+
+        bool depthTest(vec3 pos){
+            vec2 uv = worldToUV(pos);
+            float depth = texture2D(gDepth, uv).r;
+            return linearDepth(depth) >= 1.0;
         }
 
         vec4 rayMarch(vec3 origin, vec3 direction) {
@@ -175,9 +152,13 @@ const ssrAveragedFragmentShader = `
             vec3 rayOrigin = origin;
             vec3 rayDir = direction;
             float attenuation = 1.0;
-            const int maxBounces = 2;
 
-            for(int bounce = 0; bounce < maxBounces; bounce++){
+            const int MAX_BOUNCES = 2;
+            const int MAX_STEPS = 70;
+            const float MAX_DIST = 500.0;
+            const float SURF_EPS = 0.01;
+
+            for(int bounce = 0; bounce < MAX_BOUNCES; bounce++){
                 float t = 0.0;
                 bool hit = false;
                 vec3 hitPos = vec3(0.0);
@@ -185,35 +166,39 @@ const ssrAveragedFragmentShader = `
                 float hitRefl = 0.0;
                 vec3 hitSpec = vec3(0.0);
                 float hitShin = 0.0;
-                for (int i = 0; i < 128; i++){
+
+                for (int i = 0; i < MAX_STEPS; i++){
                     vec3 pos = rayOrigin + t * rayDir;
-                    float d = intersect(pos, hitColor, hitRefl, hitSpec, hitShin);
-                    if (d < 0.01){
+                    if(bounce > 0){
+                        if (depthTest(pos)){
+                            break;
+                        }
+                    }
+                    float d = intersect(pos);
+                    if (d < SURF_EPS){
                         hitPos = pos;
                         hit = true;
                         break;
                     }
                     t += d;
-                    if (t > 500.0) break;
+                    if (t > MAX_DIST) break;
                 }
                 if (!hit){
                     if(bounce == 0){
-                        vec2 uv = worldToUV(hitPos);
-                        finalColor = texture2D(gColor, uv).rgb;
-                        return vec4(finalColor, 0.0);
+                        return vec4(0.0);
                     }
-                    
-                    
                 }
                 else{
                     vec2 uv = worldToUV(hitPos);
-                    hitColor = averageColor(gColor, uv); // Use averaged color to smooth artifacts
-                    hitRefl = texture2D(gReflection, uv).r; // If artifacts in refl, use averageColor(gReflection, uv).r
+                    hitColor = averageColor(gColor, uv);
+                    hitRefl = texture2D(gReflection, uv).r;
+                    hitShin = texture2D(gShininess, uv).r;
+                    hitSpec = texture2D(gSpecular, uv).rgb;
                     
                     finalColor = mix(finalColor, hitColor, attenuation);
                     attenuation *= hitRefl;
 
-                    vec3 normal = texture2D(gNormal, uv).rgb; // If artifacts in specular, use averageColor(gNormal, uv).rgb
+                    vec3 normal = texture2D(gNormal, uv).rgb;
 
                     if(hitShin > 0.0){
                         vec3 viewDir = normalize(cameraPos-hitPos);
@@ -228,8 +213,6 @@ const ssrAveragedFragmentShader = `
                     
                     rayDir = reflect(rayDir, normal);
                     rayOrigin = hitPos + normal;
-
-                    
                 }
                 
             }
@@ -241,12 +224,11 @@ const ssrAveragedFragmentShader = `
 
     void main() {
         vec2 uv = (gl_FragCoord.xy / resolution) * 2.0 - 1.0;
-        vec2 suv = gl_FragCoord.xy / resolution;
         vec4 rayClip = vec4(uv, -1.0, 1.0);
         vec4 rayEye = invViewProj * rayClip;
         rayEye.xyz /= rayEye.w;
         rayEye = vec4(rayEye.xy, -1.0, 0.0);
-        vec3 rayDir = normalize((uCamMatrix * vec4(rayEye.xyz, 0.0)).xyz);
+        vec3 rayDir = normalize((cameraMatrix * vec4(rayEye.xyz, 0.0)).xyz);
 
         vec4 result = rayMarch(cameraPos, rayDir);
         FragColor = result;
