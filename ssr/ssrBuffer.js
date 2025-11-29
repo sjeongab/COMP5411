@@ -12,12 +12,14 @@ function loadSSRMaterial(ssrCamera) {
         gColor: { value: gBuffer.textures[0] },
         gNormal: { value: gBuffer.textures[1] },
         gReflection: { value: gBuffer.textures[2] },
+        gShininess: { value: gBuffer.textures[3] },
+        gSpecular: { value: gBuffer.textures[4] },
         gDepth: { value: gBuffer.depthTexture },
         resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-        uCamMatrix: { value: ssrCamera.matrixWorld},
+        cameraPos: { value: ssrCamera.position },
+        cameraMatrix: { value: ssrCamera.matrixWorld},
         invViewProj: {value: new THREE.Matrix4()},
         viewProj: {value: new THREE.Matrix4()},
-        cameraPos: { value: ssrCamera.position },
         lightDir: { value: new THREE.Vector3(0.5, 0.7, 0.5).normalize() },
 
         spheres: {

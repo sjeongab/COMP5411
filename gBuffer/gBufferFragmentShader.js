@@ -13,6 +13,8 @@ const gBufferFragmentShader = `
     layout(location = 0) out vec4 gColor;
     layout(location = 1) out vec4 gNormal;
     layout(location = 2) out float gReflection;
+    layout(location = 3) out float gShininess;
+    layout(location = 4) out vec3 gSpecular;
 
     void main() {
         vec3 normal = normalize(vNormal);
@@ -29,6 +31,8 @@ const gBufferFragmentShader = `
         gColor = vec4(final, 1.0);
         gNormal = vec4(normal, 1.0);
         gReflection = uReflectivity;
+        gShininess = uShininess;
+        gSpecular = uSpecular;
     }
 `;
 

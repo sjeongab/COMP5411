@@ -41,7 +41,7 @@ export function init(canvas) {
       updateFPS(currentTime);
       cameraControls.update();
 
-      ssrMaterial.uniforms.uCamMatrix.value.copy(camera.matrixWorld);
+      ssrMaterial.uniforms.cameraMatrix.value.copy(camera.matrixWorld);
       
       ssrMaterial.uniforms.invViewProj.value.copy(camera.projectionMatrix).invert();
       const viewMatrix = camera.matrixWorldInverse;

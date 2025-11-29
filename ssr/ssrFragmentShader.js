@@ -6,6 +6,8 @@ const ssrFragmentShader = `
         uniform sampler2D gColor;
         uniform sampler2D gNormal;
         uniform sampler2D gReflection;
+        uniform sampler2D gShininess;
+        uniform sampler2D gSpecular;
         uniform sampler2D gDepth;
 
         uniform vec2 resolution;
@@ -13,10 +15,9 @@ const ssrFragmentShader = `
         uniform vec3 lightDir;
 
         uniform vec3 cameraPos;
+        uniform mat4 cameraMatrix;
         uniform mat4 viewProj;
-        uniform mat4 invViewProj; // Inverse view-projection matrix for ray direction
-
-        uniform mat4  uCamMatrix; // TODO: rename uCamMatrix
+        uniform mat4 invViewProj;
 
         struct Ray {
             vec3 origin;
@@ -54,26 +55,16 @@ const ssrFragmentShader = `
         out vec4 FragColor;
 
         vec2 worldToUV(vec3 worldPos) {
-            // Transform to clip space
             vec4 clip = viewProj * vec4(worldPos, 1.0);
-            // Alternative if using viewProj: vec4 clip = viewProj * vec4(worldPos, 1.0);
-            
-            // Perspective divide to NDC [-1,1]
+
             vec3 ndc = clip.xyz / clip.w;
-            
-            // Check if point is in front of camera (optional: discard invalid)
+
             if (ndc.z < -1.0 || ndc.z > 1.0) {
-                return vec2(-1.0); // Invalid (behind camera or out of range); handle in caller (e.g., skip sampling)
+                return vec2(-1.0);
             }
-            
-            // Map to UV [0,1] (bottom-left origin)
+
             vec2 uv = ndc.xy * 0.5 + 0.5;
-            
-            // Clamp to [0,1] to avoid out-of-bounds sampling
             uv = clamp(uv, 0.0, 1.0);
-            
-            // Optional: Flip y for top-left origin (e.g., some UI systems)
-            // uv.y = 1.0 - uv.y;
             
             return uv;
         }
@@ -92,7 +83,7 @@ const ssrFragmentShader = `
             return length(max(dist, 0.0)) + min(max(dist.x, max(dist.y, dist.z)), 0.0);
         }
 
-        float intersect(vec3 pos, out vec3 hitColor, out float hitReflectivity, out vec3 hitSpec, out float hitShin) {
+        float intersect(vec3 pos) {
             float minDist = 1e10;
 
             for (int i = 0; i < 5; i++) {
@@ -117,9 +108,16 @@ const ssrFragmentShader = `
             return minDist;
         }
 
-        float linearDepth(float z, float near, float far) {
+        float linearDepth(float z) {
             float zNDC = z * 2.0 - 1.0;
-            return (2.0 * near * far) / (far + near - zNDC * (far - near));
+            zNDC = (2.0 * 1.0 * 500.0) / (500.0 + 1.0 - zNDC * (500.0 - 1.0));
+            return (zNDC - 1.0) / (500.0 - 1.0);
+        }
+
+        bool depthCheck(vec3 pos){
+            vec2 uv = worldToUV(pos);
+            float depth = texture2D(gDepth, uv).r;
+            return linearDepth(depth) >= 1.0;
         }
 
         vec4 rayMarch(vec3 origin, vec3 direction) {
@@ -127,10 +125,13 @@ const ssrFragmentShader = `
             vec3 rayOrigin = origin;
             vec3 rayDir = direction;
             float attenuation = 1.0;
-            const int maxBounces = 2;
 
+            const int MAX_BOUNCES = 2;
+            const int MAX_STEPS = 70;
+            const float MAX_DIST = 500.0;
+            const float SURF_EPS = 0.01;
 
-            for(int bounce = 0; bounce < maxBounces; bounce++){
+            for(int bounce = 0; bounce < MAX_BOUNCES; bounce++){
                 float t = 0.0;
                 bool hit = false;
                 vec3 hitPos = vec3(0.0);
@@ -139,25 +140,21 @@ const ssrFragmentShader = `
                 vec3 hitSpec = vec3(0.0);
                 float hitShin = 0.0;
 
-                for (int i = 0; i < 70; i++){
+                for (int i = 0; i < MAX_STEPS; i++){
                     vec3 pos = rayOrigin + t * rayDir; //TODO: Primary check at the main
                     if(bounce > 0){
-                    vec2 uv = worldToUV(pos);
-                    float depth = texture2D(gDepth, uv).r;
-                    float linearDepth = linearDepth(depth, 1.0, 500.0);
-                    float z = (linearDepth - 1.0) / (500.0 - 1.0);
-                    if (z >= 1.0){
-                        break;
+                        if (depthCheck(pos)){
+                            break;
+                        }
                     }
-                    }
-                    float d = intersect(pos, hitColor, hitRefl, hitSpec, hitShin);
-                    if (d < 0.001){
+                    float d = intersect(pos);
+                    if (d < SURF_EPS){
                         hitPos = pos;
                         hit = true;
                         break;
                     }
                     t += d;
-                    if (t > 500.0) break;
+                    if (t > MAX_DIST) break;
                 }
                 if (!hit){
                     if(bounce == 0){
@@ -168,13 +165,15 @@ const ssrFragmentShader = `
                     vec2 uv = worldToUV(hitPos);
                     hitColor = texture2D(gColor, uv).rgb;
                     hitRefl = texture2D(gReflection, uv).r;
+                    hitShin = texture2D(gShininess, uv).r;
+                    hitSpec = texture2D(gSpecular, uv).rgb;
                     
                     finalColor = mix(finalColor, hitColor, attenuation);
                     attenuation *= hitRefl;
 
                     vec3 normal = texture2D(gNormal, uv).rgb;
 
-                    if(hitShin > 0.0){ //import hitShin from gBuffer?
+                    if(hitShin > 0.0){
                         vec3 viewDir = normalize(cameraPos-hitPos);
                         vec3 reflectDir = reflect(-lightDir, normal);
                         float spec = max(dot(reflectDir, viewDir), 0.0);
@@ -204,19 +203,9 @@ const ssrFragmentShader = `
         vec4 rayEye = invViewProj * rayClip;
         rayEye.xyz /= rayEye.w;
         rayEye = vec4(rayEye.xy, -1.0, 0.0);
-        vec3 rayDir = normalize((uCamMatrix * vec4(rayEye.xyz, 0.0)).xyz);
+        vec3 rayDir = normalize((cameraMatrix * vec4(rayEye.xyz, 0.0)).xyz);
 
-        vec4 result = rayMarch(cameraPos, rayDir);
-
-
-        vec2 suv = gl_FragCoord.xy / resolution;
-        float depth = texture2D(gDepth, suv).r;
-        float linearDepth = linearDepth(depth, 1.0, 500.0);
-        float z = (linearDepth - 1.0) / (500.0 - 1.0);
-        
-        FragColor = result;
-        //depth = 500.0 / (500.0 - depth * 499.0);
-        //FragColor= vec4(z, 0.0, 0.0, 1.0);
+        FragColor = rayMarch(cameraPos, rayDir);
     }
 `;
 
