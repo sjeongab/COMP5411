@@ -27,15 +27,11 @@ const ssrFragmentShader = `
         struct Sphere {
             vec3 position;
             float radius;
-            vec3 specular;
-            float shininess;
         };
 
         struct Box {
             vec3 position;
             float scale;
-            vec3 specular;
-            float shininess;
         };
 
         struct Plane{
@@ -43,8 +39,6 @@ const ssrFragmentShader = `
             vec3 normal;
             float offset;
             float scale;
-            vec3 specular;
-            float shininess;
         };
 
 
@@ -114,7 +108,7 @@ const ssrFragmentShader = `
             return (zNDC - 1.0) / (500.0 - 1.0);
         }
 
-        bool depthCheck(vec3 pos){
+        bool depthTest(vec3 pos){
             vec2 uv = worldToUV(pos);
             float depth = texture2D(gDepth, uv).r;
             return linearDepth(depth) >= 1.0;
@@ -141,9 +135,9 @@ const ssrFragmentShader = `
                 float hitShin = 0.0;
 
                 for (int i = 0; i < MAX_STEPS; i++){
-                    vec3 pos = rayOrigin + t * rayDir; //TODO: Primary check at the main
+                    vec3 pos = rayOrigin + t * rayDir;
                     if(bounce > 0){
-                        if (depthCheck(pos)){
+                        if (depthTest(pos)){
                             break;
                         }
                     }
